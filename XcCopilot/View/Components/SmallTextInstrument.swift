@@ -1,18 +1,18 @@
 //
-//  MapPlayground.swift
+//  SmallTextInstrument.swift
 //  XcCopilot
 //
-//  Created by Dave Cameron on 2023-12-21.
+//  Created by Dave Cameron on 2024-01-13.
 //
 
 import SwiftUI
 
-struct MapPlayground: View {
+struct SmallTextInstrument: View {
     var body: some View {
         Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
     }
 }
 
 #Preview {
-    MapPlayground()
+    SmallTextInstrument()
 }
