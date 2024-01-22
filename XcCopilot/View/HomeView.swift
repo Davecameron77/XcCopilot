@@ -8,8 +8,51 @@
 import SwiftUI
 
 struct HomeView: View {
+    @StateObject var vm: XcCopilotViewModel = .init()
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        TabView {
+            MapView()
+                .environmentObject(vm)
+                .tabItem {
+                    Label("Map", systemImage: "map")
+                }
+                .tag("map")
+
+            InstrumentView()
+                .environmentObject(vm)
+                .tabItem {
+                    Label("Instrumenrts", systemImage: "gauge")
+                }
+                .tag("instruments")
+
+            LogbookView()
+                .environmentObject(vm)
+                .tabItem {
+                    Label("Logbook", systemImage: "book")
+                }
+                .tag("logbook")
+
+            SettingsView()
+                .environmentObject(vm)
+                .tabItem {
+                    Label("Settings", systemImage: "gear")
+                }
+                .tag("settings")
+        }
+        .onAppear {
+            // correct the transparency bug for Tab bars
+            let tabBarAppearance = UITabBarAppearance()
+            tabBarAppearance.configureWithOpaqueBackground()
+            UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+            // correct the transparency bug for Navigation bars
+            let navigationBarAppearance = UINavigationBarAppearance()
+            navigationBarAppearance.configureWithOpaqueBackground()
+            UINavigationBar.appearance().scrollEdgeAppearance = navigationBarAppearance
+        }
+        .alert(vm.alertText, isPresented: $vm.alertShowing) {
+            Button("OK", role: .cancel) { }
+        }
     }
 }
 

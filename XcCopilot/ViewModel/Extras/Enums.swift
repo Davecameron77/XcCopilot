@@ -59,3 +59,8 @@ enum VolumeLevels: Int, Equatable, CaseIterable {
         return lhs.rawValue == rhs.rawValue
     }
 }
+
+enum GaugeSize {
+    case small
+    case large
+}

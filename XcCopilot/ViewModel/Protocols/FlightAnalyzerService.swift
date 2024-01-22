@@ -6,3 +6,9 @@
 //
 
 import Foundation
+
+protocol FlightAnalyzerService {
+    func analyzeCurrentFLight()
+    func analyzeFlight(flightToAnalyze: Flight)
+    func analyzeStoredFlights(flightsToAnalyze: [Flight])
+}

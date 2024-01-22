@@ -12,7 +12,7 @@ struct InstrumentBackground: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding()
-            .frame(width: 125, height: 125)
+            .frame(minWidth: 75, idealWidth: 125, maxWidth: 125, minHeight: 75, idealHeight: 125, maxHeight: 125)
             .aspectRatio(contentMode: .fit)
             .background(Color(UIColor.systemBackground))
             .opacity(0.65)

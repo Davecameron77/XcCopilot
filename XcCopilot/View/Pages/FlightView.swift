@@ -8,11 +8,19 @@
 import SwiftUI
 
 struct FlightView: View {
+    let flight: Flight
+    private let formatter = DateComponentsFormatter()
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        List {
+            Text("Flight Start: \(flight.flightStartDate, format: .dateTime)")
+            Text("Flight End: \(flight.flightStartDate, format: .dateTime)")
+            Text("Flight Duration: \(formatter.string(from: flight.flightDuration)!)")
+        }
+        .navigationTitle(flight.flightTitle)
     }
 }
 
 #Preview {
-    FlightView()
+    FlightView(flight: Flight.dummyFlight)
 }

@@ -8,11 +8,29 @@
 import SwiftUI
 
 struct TextInstrument: View {
+    let label: String
+    let unit: String
+    let minimum: Double
+    let maximum: Double
+    var currentValue: Double
+    var displayValue: String {
+        String(format: "%.1f", currentValue)
+    }
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        VStack {
+            Text(label)
+                .font(.caption)
+            Text("\(displayValue) \(unit)")
+                .font(.title2)
+        }
+    }
+    
+    func instrumentBackground() -> some View {
+        modifier(InstrumentBackground())
     }
 }
 
 #Preview {
-    TextInstrument()
+    TextInstrument(label: "Temperature", unit: "°C", minimum: 0.0, maximum: 50.0, currentValue: 14.0)
 }

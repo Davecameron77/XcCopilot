@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct GaugeInstrument: View {
+    let type: GaugeType
     let label: String
     let unit: String
     let minimum: Double
@@ -20,30 +21,42 @@ struct GaugeInstrument: View {
     var body: some View {
         VStack {
             Text(label)
-                .font(.headline)
+                .font(.caption)
             
-            Spacer()
-            
-            Gauge(value: currentValue, in: minimum...maximum) {
+            if type == .gauge {
+                Gauge(value: currentValue, in: minimum...maximum) {
+                    Text(unit)
+                } currentValueLabel: {
+                    Text("\(Int(currentValue))")
+                } minimumValueLabel: {
+                    Text("\(Int(minimum))")
+                } maximumValueLabel: {
+                    Text("\(maximum > 1000 ? "1k+" : String(format: "%0.f", maximum))")
+                }
+                .gaugeStyle(.accessoryCircular)
                 Text(unit)
-            } currentValueLabel: {
-                Text("\(Int(currentValue))")
-            } minimumValueLabel: {
-                Text("\(Int(minimum))")
-            } maximumValueLabel: {
-                Text("\(maximum > 1000 ? "1k+" : String(format: "%0.f", maximum))")
+            } else {
+                Text("\(displayValue) \(unit)")
+                    .font(.title2)
+                    .padding()
             }
-            .gaugeStyle(.accessoryCircular)
-            Text(unit)
-            Spacer()
+            
+            
         }
-        .padding()
-        .frame(minWidth: 100, maxWidth: .infinity, minHeight: 100, maxHeight: .infinity)
-        .cornerRadius(10)
-        .padding(5)
+    }
+    
+    func instrumentBackground() -> some View {
+        modifier(InstrumentBackground())
     }
 }
 
 #Preview {
-    GaugeInstrument(label: "Groundspeed", unit: "km/h", minimum: 0, maximum: 40, currentValue: 34)
+    GaugeInstrument(
+        type: .gauge,
+        label: "Groundspeed",
+        unit: "km/h",
+        minimum: 0,
+        maximum: 40,
+        currentValue: 34
+    )
 }

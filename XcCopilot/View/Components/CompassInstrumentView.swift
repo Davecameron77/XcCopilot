@@ -9,7 +9,6 @@ import SwiftUI
 
 struct CompassInstrumentView: View {
     let label: String
-    let unit: String
     let minimum: Double
     let maximum: Double
     let currentValue: Double
@@ -20,9 +19,7 @@ struct CompassInstrumentView: View {
     var body: some View {
         VStack {
             Text(label)
-                .font(.headline)
-            Spacer()
-            
+                .font(.headline)            
             VStack {
                 ZStack {
                     Circle()
@@ -34,16 +31,15 @@ struct CompassInstrumentView: View {
                 }
             }
             .frame(width: 60, height: 60)
-            Text("\(displayValue)°")
-            Spacer()
+            Text("\(displayValue) °")
         }
-        .padding()
-        .frame(minWidth: 150, maxWidth: .infinity, minHeight: 150, maxHeight: .infinity)
-        .cornerRadius(10)
-        .padding(5)
+    }
+    
+    func instrumentBackground() -> some View {
+        modifier(InstrumentBackground())
     }
 }
 
 #Preview {
-    CompassInstrumentView(label: "Heading", unit: "°", minimum: 0, maximum: 360, currentValue: 45)
+    CompassInstrumentView(label: "Heading", minimum: 0, maximum: 360, currentValue: 45)
 }
