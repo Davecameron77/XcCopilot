@@ -55,7 +55,12 @@ class XcCopilotViewModel: ObservableObject,
     
     // Map
     @Published var mapPosition: MapCameraPosition
-    private var cameraBackup: MapCameraPosition = .camera(MapCamera(centerCoordinate: .myLocation, distance: 500))
+    private var cameraBackup: MapCameraPosition = .camera(
+        MapCamera(
+            centerCoordinate: .myLocation,
+            distance: 500
+        )
+    )
     
     // Settings
     /// True in case user has audio selected active
@@ -137,10 +142,11 @@ class XcCopilotViewModel: ObservableObject,
     /// Init a new ViewModel with default properties
     ///
     init() {
+        self.mapPosition = MapCameraPosition.userLocation(followsHeading: true, fallback: cameraBackup)
+        
         flightComputer = FlightComputer()
         flightRecorder = FlightRecorder()
-        
-        self.mapPosition = MapCameraPosition.userLocation(followsHeading: true, fallback: cameraBackup)
+        flightComputer.delegate = self
         
         #if DEBUG
         let dummyOne = Flight(isDummy: true)
@@ -170,20 +176,6 @@ class XcCopilotViewModel: ObservableObject,
         self.verticalVelocityMetresPerSecond = self.flightComputer.verticalVelocityMetresPerSecond
         self.glideRangeInMetres = self.flightComputer.glideRangeInMetres
         
-        if self.verticalVelocityMetresPerSecond > 0.5 {
-            #warning("TODO - Playback frequency")
-            if audioActive {
-                SoundManager.shared.player?.setVolume(Float(varioVolume), fadeDuration: TimeInterval.leastNonzeroMagnitude)
-                SoundManager.shared.playAscendingTone()
-            }
-        } else if self.verticalVelocityMetresPerSecond < -0.5 {
-            #warning("TODO - Playback frequency")
-            if audioActive {
-                SoundManager.shared.player?.setVolume(Float(varioVolume), fadeDuration: TimeInterval.leastNonzeroMagnitude)
-                SoundManager.shared.playDescendingTone()
-            }
-        }
-        
         self.gpsCoords = self.flightComputer.currentCoords
         self.gpsAltitude = self.elevationUnits(elevationMetres: self.flightComputer.gpsAltitude)
         self.gpsSpeed = self.speedUnits(speedMetresSecond: self.flightComputer.gpsSpeed)
@@ -196,6 +188,36 @@ class XcCopilotViewModel: ObservableObject,
         self.magneticHeading = self.flightComputer.magneticHeading
         
         flightTime = Duration.seconds(self.flightComputer.flightTime)
+        
+        playVarioSound()
+    }
+    
+    func playVarioSound() {
+        // Set playback frequency based on vertical velocity
+        let frequency = switch abs(self.verticalVelocityMetresPerSecond) {
+        case 0..<1:
+            1.0
+        case 1..<2:
+            0.75
+        default:
+            0.5
+        }
+        
+        if self.verticalVelocityMetresPerSecond > 0.01 {
+            if audioActive {
+                SoundManager.shared.player?.setVolume(Float(varioVolume), fadeDuration:  TimeInterval.leastNonzeroMagnitude)
+                let timer = Timer.scheduledTimer(withTimeInterval: frequency, repeats: true) { timer in
+                    SoundManager.shared.playAscendingTone()
+                }
+            }
+        } else if self.verticalVelocityMetresPerSecond < -0.01 {
+            if audioActive {
+                SoundManager.shared.player?.setVolume(Float(varioVolume), fadeDuration: TimeInterval.leastNonzeroMagnitude)
+                let timer = Timer.scheduledTimer(withTimeInterval: frequency, repeats: true) { timer in
+                    SoundManager.shared.playDescendingTone()
+                }
+            }
+        }
     }
     
     ///

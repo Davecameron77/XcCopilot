@@ -41,6 +41,20 @@ struct MapView: View {
                     }
                     
                     Spacer()
+                    
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 10) {
+                            Image(systemName: "arrow.up")
+                                .font(.title)
+                            Text("0°  1.2 km")
+                        }
+                        .frame(width: 100, height: 100)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                        .padding(3)
+                    }
+                    
                     MapInstrumentView(
                         vm: vm,
                         calculatedElevation: vm.calculatedElevation,

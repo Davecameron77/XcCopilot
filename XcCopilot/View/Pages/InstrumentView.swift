@@ -21,7 +21,7 @@ struct InstrumentView: View {
                     }
                 }
                 .font(.title)
-                .padding()
+                .padding(5)
                 .tint(vm.flightComputer.inFlight ? .red : .green)
                 .buttonStyle(.borderedProminent)
                 
@@ -30,7 +30,7 @@ struct InstrumentView: View {
                     InstrumentRow(label: "Flight Time: ", value: vm.flightTime.formatted())
                     InstrumentRow(
                         label: "Vertical Speed: ",
-                        value: String(format: "%.1f", vm.verticalVelocityMetresPerSecond),
+                        value: String(format: "%.2f", vm.verticalVelocityMetresPerSecond),
                         unit: vm.verticalSpeedUnit.rawValue
                     )
                     
@@ -96,6 +96,6 @@ struct InstrumentRow<T: StringProtocol>: View {
             Text(unit ?? "")
         }
         .padding(.vertical, 3)
-        .font(.title)
+        .font(.title2)
     }
 }

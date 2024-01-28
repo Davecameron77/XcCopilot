@@ -8,6 +8,7 @@
 import Foundation
 import CoreLocation
 import CoreMotion
+import SwiftUI
 
 ///
 /// The FlightComputer is responsible for tracking flight parameters, but has no GUI functions.
@@ -26,6 +27,11 @@ class FlightComputer: NSObject,
         startBaroUpdates()
         startCoreLocationUpdates()
         startCoreMotionUpdates()
+    }
+    
+    convenience init(delegate: ViewModelDelegate) {
+        self.init()
+        self.delegate = delegate
     }
     
     var delegate: ViewModelDelegate?
@@ -137,7 +143,8 @@ class FlightComputer: NSObject,
         // else smooth to zero
         // CoreMotion collects at 100 hz, with an average trim speed of 30 km/h
         // or 8.3 m/s, yields an average sample of 25m travelled at MAX_ACCEL_HISTORY = 300
-        if averageVerticalAcceleration > 0.1 {
+        #warning("DEBUG value")
+        if averageVerticalAcceleration > 0.00001 {
             
             // Sum the differences of the baro altitude history
             var difference = 0.0
