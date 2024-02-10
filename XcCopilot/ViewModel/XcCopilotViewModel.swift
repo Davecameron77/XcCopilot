@@ -29,7 +29,7 @@ class XcCopilotViewModel: ObservableObject,
     @Published var pitchInDegrees: Double                             = 0.0
     @Published var rollInDegrees: Double                              = 0.0
     @Published var yawInDegrees: Double                               = 0.0
-    @Published var accelerationZMetresPerSecondSquared: Double        = 0.0
+    @Published var verticalAccelerationMetresPerSecondSquared: Double = 0.0
     
     // GPS
     @Published var gpsCoords: CLLocationCoordinate2D                  = CLLocationCoordinate2D.init(latitude: 0.0, longitude: 0.0)
@@ -42,6 +42,8 @@ class XcCopilotViewModel: ObservableObject,
     @Published var calculatedElevation: Double                        = 0.0
     @Published var verticalVelocityMetresPerSecond: Double            = 0.0
     @Published var glideRangeInMetres: Double                         = 0.0
+    @Published var nearestThermalCourse: Double                       = 0.0
+    @Published var nearestThermalDistance: Double                     = 0.0
     
     // Compass
     @Published var magneticHeading: Double = 0.0
@@ -77,6 +79,9 @@ class XcCopilotViewModel: ObservableObject,
            DispatchQueue.main.async {
               self.objectWillChange.send()
            }
+        }
+        didSet {
+            SoundManager.shared.player?.setVolume(Float(varioVolume), fadeDuration:  TimeInterval.leastNonzeroMagnitude)
         }
     }
     @AppStorage("speedUnit") var speedUnit: SpeedUnits = .kmh {
@@ -174,6 +179,7 @@ class XcCopilotViewModel: ObservableObject,
         self.rollInDegrees = self.flightComputer.rollInDegrees
         self.yawInDegrees = self.flightComputer.yawInDegrees
         self.verticalVelocityMetresPerSecond = self.flightComputer.verticalVelocityMetresPerSecond
+        self.verticalAccelerationMetresPerSecondSquared = self.flightComputer.verticalAccelerationMetresPerSecondSquared
         self.glideRangeInMetres = self.flightComputer.glideRangeInMetres
         
         self.gpsCoords = self.flightComputer.currentCoords
@@ -194,27 +200,37 @@ class XcCopilotViewModel: ObservableObject,
     
     func playVarioSound() {
         // Set playback frequency based on vertical velocity
-        let frequency = switch abs(self.verticalVelocityMetresPerSecond) {
+        var tonesPlayed = 0
+        var tonesToPlay = 0
+        var varioFrequency = 0.0
+        
+        switch abs(self.verticalVelocityMetresPerSecond) {
         case 0..<1:
-            1.0
+            varioFrequency = 1.0
+            tonesToPlay = 1
         case 1..<2:
-            0.75
+            varioFrequency = 0.5
+            tonesToPlay = 2
         default:
-            0.5
+            varioFrequency = 0.25
+            tonesToPlay = 4
         }
         
         if self.verticalVelocityMetresPerSecond > 0.01 {
-            if audioActive {
-                SoundManager.shared.player?.setVolume(Float(varioVolume), fadeDuration:  TimeInterval.leastNonzeroMagnitude)
-                let timer = Timer.scheduledTimer(withTimeInterval: frequency, repeats: true) { timer in
-                    SoundManager.shared.playAscendingTone()
+            if flightComputer.inFlight && audioActive {
+                let _ = Timer.scheduledTimer(withTimeInterval: varioFrequency, repeats: true) { timer in
+                    if tonesPlayed <= tonesToPlay {
+                        SoundManager.shared.playAscendingTone()
+                        tonesPlayed += 1
+                    }
                 }
             }
         } else if self.verticalVelocityMetresPerSecond < -0.01 {
-            if audioActive {
-                SoundManager.shared.player?.setVolume(Float(varioVolume), fadeDuration: TimeInterval.leastNonzeroMagnitude)
-                let timer = Timer.scheduledTimer(withTimeInterval: frequency, repeats: true) { timer in
-                    SoundManager.shared.playDescendingTone()
+            if flightComputer.inFlight && audioActive {
+                let _ = Timer.scheduledTimer(withTimeInterval: varioFrequency, repeats: true) { timer in
+                    if tonesPlayed <= tonesToPlay {
+                        SoundManager.shared.playDescendingTone()
+                    }
                 }
             }
         }
@@ -278,7 +294,9 @@ class XcCopilotViewModel: ObservableObject,
     }
 }
 
+///
 /// Helper methods
+///
 extension XcCopilotViewModel {
     ///
     /// Shows an alert on screen

@@ -29,10 +29,7 @@ class FlightComputer: NSObject,
         startCoreMotionUpdates()
     }
     
-    convenience init(delegate: ViewModelDelegate) {
-        self.init()
-        self.delegate = delegate
-    }
+    //MARK: -- Vars
     
     var delegate: ViewModelDelegate?
 
@@ -78,12 +75,13 @@ class FlightComputer: NSObject,
         return calculatedElevation * 10
     }
     var verticalVelocityMetresPerSecond            = 0.0
+    var verticalAccelerationMetresPerSecondSquared = 0.0
     
     // For vertical velocity and elevation calculations
     private var baroAltitudeHistory: [Double]      = .init()
     private var zAccelerationHistory: [Double]     = .init()
-    private let MAX_BARO_HISTORY                   = 15
-    private let MAX_ACCEL_HISTORY                  = 300
+    private let MAX_BARO_HISTORY                   = 12
+    private let MAX_ACCEL_HISTORY                  = 150
     private var lastElevationUpdate                = Date.distantPast
     private let SECONDS_BETWEEN_ELEVATION_UPDATES  = 10
     
@@ -93,6 +91,8 @@ class FlightComputer: NSObject,
     private var motionManager: CMMotionManager     = .init()
     private var cmRecorder: CMSensorRecorder       = .init()
     private var refreshQueue: OperationQueue       = .init()
+    
+    //MARK: -- Methods
     
     ///
     /// Just triggers an inFlight bool to be aware of state. Takeoff detection only functions when !inFlight
@@ -133,32 +133,33 @@ class FlightComputer: NSObject,
     
     ///
     /// Calculates VerticalVelocity based on given accelerometer/baro history
+    /// Also attempts to identify the DMS of any thermals
     ///
     private func calculateVerticalVelocity() {
         
-        // Absolute value of average vertical acceleration
-        let averageVerticalAcceleration = abs(zAccelerationHistory.average)
+        // 1 - Calculate simple moving average of altitude history
+
+        // Sum the differences of the baro altitude history
+        var difference = 0.0
+        for index in 0 ..< baroAltitudeHistory.count - 1 {
+            difference += (baroAltitudeHistory[index+1] - baroAltitudeHistory[index])
+        }
         
-        // If net change is < 0.1g or 0.98 m/s2 continue calculation
-        // else smooth to zero
+        // Net change in vertical displacement / number of samples collected
+        // Barometer samples at 6 hz, with an average trim speed of 30 km/h
+        // or 8.3 m/s, yields an average sample of 16.6m travelled at MAX_BARO_HISTORY = 12
+        // Absolute value of change must be > 0.1 m/s2
+        let simpleAverage = (difference / Double(baroAltitudeHistory.count)) * 6
+        verticalVelocityMetresPerSecond = abs(simpleAverage) > 0.1 ? simpleAverage : 0.0
+        
+        // 2 - Detect thermic activity by way of consistant acceleration
+        
+        // If net change is > 0.1g or 0.98 m/s2, interpret a detected thermal
         // CoreMotion collects at 100 hz, with an average trim speed of 30 km/h
-        // or 8.3 m/s, yields an average sample of 25m travelled at MAX_ACCEL_HISTORY = 300
-        #warning("DEBUG value")
-        if averageVerticalAcceleration > 0.00001 {
-            
-            // Sum the differences of the baro altitude history
-            var difference = 0.0
-            for index in 0 ..< baroAltitudeHistory.count - 1 {
-                difference = (baroAltitudeHistory[index+1] - baroAltitudeHistory[index])
-            }
-            
-            // Net change in vertical displacement / number of samples collected
-            // Barometer samples at 6 hz, with an average trim speed of 30 km/h
-            // or 8.3 m/s, yields an average sample of 21m travelled at MAX_BARO_HISTORY = 15
-            verticalVelocityMetresPerSecond = (difference / Double(baroAltitudeHistory.count))
-        } else {
-            // Insignifigant change, set to zero
-            verticalVelocityMetresPerSecond = 0.0
+        // or 8.3 m/s, yields an average sample of 12.5m travelled at MAX_ACCEL_HISTORY = 150
+        if abs(zAccelerationHistory.average) > 0.1 {
+            verticalAccelerationMetresPerSecondSquared = (zAccelerationHistory.average * 9.81) - 1
+            #warning("TODO - Track thermals")
         }
     }
     
@@ -212,7 +213,9 @@ class FlightComputer: NSObject,
     }
 }
 
-// CoreLocation methods
+///
+/// CoreLocation methods
+///
 extension FlightComputer {
     ///
     /// Starts CoreLocation Services
@@ -306,7 +309,9 @@ extension FlightComputer {
     }
 }
 
-// CoreMotion methods
+///
+/// CoreMotion methods
+///
 extension FlightComputer {
     ///
     /// Starts CoreMotion Services
@@ -366,7 +371,7 @@ extension FlightComputer {
         zAccelerationHistory.append(zAcceleration)
         
         // Constrain array to avoid overflow
-        if self.zAccelerationHistory.count > MAX_ACCEL_HISTORY {
+        if self.zAccelerationHistory.count >= MAX_ACCEL_HISTORY {
             let recordsToRemove = zAccelerationHistory.count - MAX_ACCEL_HISTORY
             for i in 0 ..< recordsToRemove {
                 zAccelerationHistory.remove(at: i)
@@ -385,12 +390,12 @@ extension FlightComputer {
                 self.altAvailable = true
                 DispatchQueue.main.async {
                     self.baroAltitude = data!.altitude
-                    self.baroAltitudeHistory.append(data!.altitude)
+                    self.baroAltitudeHistory.append(data!.altitude.rounded(toPlaces: 3))
                     
-                    // Truncate altitude history to last 15 frames for vertical speed calcs
+                    // Truncate altitude history to last 12 frames for vertical speed calcs
                     // Barometer samples at 6 hz, with an average trim speed of 30 km/h
-                    // or 8.3 m/s, yields an average sample of 21m travelled
-                    if self.baroAltitudeHistory.count > self.MAX_BARO_HISTORY {
+                    // or 8.3 m/s, yields an average sample of 16.6m travelled
+                    if self.baroAltitudeHistory.count >= self.MAX_BARO_HISTORY {
                         let recordsToRemove = self.baroAltitudeHistory.count - self.MAX_BARO_HISTORY
                         for i in 0 ..< recordsToRemove {
                             self.baroAltitudeHistory.remove(at: i)
@@ -424,5 +429,12 @@ extension FlightComputer {
     ///
     private func checkMotionAvailable() -> Bool {
         return motionManager.isDeviceMotionAvailable
+    }
+}
+
+extension Double {
+    func rounded(toPlaces places:Int) -> Double {
+        let divisor = pow(10.0, Double(places))
+        return (self * divisor).rounded() / divisor
     }
 }

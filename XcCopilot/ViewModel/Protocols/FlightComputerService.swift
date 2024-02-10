@@ -31,6 +31,7 @@ protocol FlightComputerService {
     var calculatedElevation: Double { get }
     var glideRangeInMetres: Double { get }
     var verticalVelocityMetresPerSecond: Double { get }
+    var verticalAccelerationMetresPerSecondSquared: Double { get }
     var flightTime: TimeInterval { get }
     
     func startFlying()

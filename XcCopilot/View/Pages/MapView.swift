@@ -41,19 +41,7 @@ struct MapView: View {
                     }
                     
                     Spacer()
-                    
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 10) {
-                            Image(systemName: "arrow.up")
-                                .font(.title)
-                            Text("0°  1.2 km")
-                        }
-                        .frame(width: 100, height: 100)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Circle())
-                        .padding(3)
-                    }
+                    NearestThermalView(direction: vm.nearestThermalDistance, distance: vm.nearestThermalDistance)
                     
                     MapInstrumentView(
                         vm: vm,
@@ -120,6 +108,32 @@ struct WeatherView: View {
             .background(.ultraThinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 5.0))
             .padding(10)
+    }
+}
+
+struct NearestThermalView: View {
+    var direction: Double = 0
+    var distance: Double = 0
+    
+    var body: some View {
+        if true {
+//        if distance != 0 {
+            HStack {
+                Spacer()
+                VStack(spacing: 10) {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 40))
+                        .rotationEffect(Angle(degrees: direction))
+                    Text("\(distance, specifier: "%.1f") m")
+                        .font(.title3)
+                }
+                .frame(width: 120, height: 120)
+                .background(.ultraThinMaterial)
+                .clipShape(Circle())
+                .padding(3)
+            }
+        }
+        
     }
 }
 
