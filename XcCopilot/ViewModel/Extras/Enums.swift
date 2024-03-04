@@ -29,19 +29,6 @@ enum TemperatureUnits: String, CaseIterable, Codable {
     case f = "f"
 }
 
-enum GaugeType: String, CaseIterable, Codable {
-    case gauge = "Gauges"
-    case text = "Text"
-}
-
-enum RefreshFrequencies: Double, CaseIterable {
-    case veryslow = 1.0
-    case slow = 0.75
-    case medium = 0.5
-    case fast = 0.25
-    case ultra = 0.1
-}
-
 enum VolumeLevels: Int, Equatable, CaseIterable {
     case off = 0
     case ten = 10
@@ -60,7 +47,3 @@ enum VolumeLevels: Int, Equatable, CaseIterable {
     }
 }
 
-enum GaugeSize {
-    case small
-    case large
-}

@@ -11,10 +11,15 @@ import SwiftData
 @Model
 class Glider {
     var name: String
-    var trimSpeed: Double
+    var trimSpeed: Double = 34.0
+    var registration: String?
     
-    init(name: String, trimSpeed: Double) {
-        self.name = name
+    init() {
+        self.name = "Unknown Glider"
+    }
+    
+    init(name: String?, trimSpeed: Double) {
+        self.name = name ?? "Unknown Glider"
         self.trimSpeed = trimSpeed
     }
 }

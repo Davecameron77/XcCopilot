@@ -15,16 +15,20 @@ class SoundManager {
     
     func playAscendingTone() {
         
-        guard let url = Bundle.main.url(forResource: "1000", withExtension: "wav") else { return }
-        
-        player = try? AVAudioPlayer(contentsOf: url)
-        player?.play()
+        DispatchQueue.global(qos: .userInteractive).async {
+            guard let url = Bundle.main.url(forResource: "1000", withExtension: "wav") else { return }
+            self.player = try? AVAudioPlayer(contentsOf: url)
+            self.player?.play()
+        }
     }
     
     func playDescendingTone() {
-        guard let url = Bundle.main.url(forResource: "200", withExtension: "wav") else { return }
         
-        player = try? AVAudioPlayer(contentsOf: url)
-        player?.play()
+        DispatchQueue.global(qos: .userInteractive).async {
+            guard let url = Bundle.main.url(forResource: "200", withExtension: "wav") else { return }
+            
+            self.player = try? AVAudioPlayer(contentsOf: url)
+            self.player?.play()
+        }
     }
 }

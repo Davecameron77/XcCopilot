@@ -76,11 +76,14 @@ class FlightComputer: NSObject,
     }
     var verticalVelocityMetresPerSecond            = 0.0
     var verticalAccelerationMetresPerSecondSquared = 0.0
+    var nearestThermal: CLLocationCoordinate2D?
+    var headingToNearestThermal: Double            = .nan
+    var distanceToNearestThermal: Double           = .nan
     
     // For vertical velocity and elevation calculations
     private var baroAltitudeHistory: [Double]      = .init()
     private var zAccelerationHistory: [Double]     = .init()
-    private let MAX_BARO_HISTORY                   = 12
+    private let MAX_BARO_HISTORY                   = 9
     private let MAX_ACCEL_HISTORY                  = 150
     private var lastElevationUpdate                = Date.distantPast
     private let SECONDS_BETWEEN_ELEVATION_UPDATES  = 10
@@ -147,7 +150,7 @@ class FlightComputer: NSObject,
         
         // Net change in vertical displacement / number of samples collected
         // Barometer samples at 6 hz, with an average trim speed of 30 km/h
-        // or 8.3 m/s, yields an average sample of 16.6m travelled at MAX_BARO_HISTORY = 12
+        // or 8.3 m/s, yields an average sample of 12.5m travelled at MAX_BARO_HISTORY = 9
         // Absolute value of change must be > 0.1 m/s2
         let simpleAverage = (difference / Double(baroAltitudeHistory.count)) * 6
         verticalVelocityMetresPerSecond = abs(simpleAverage) > 0.1 ? simpleAverage : 0.0
@@ -157,9 +160,23 @@ class FlightComputer: NSObject,
         // If net change is > 0.1g or 0.98 m/s2, interpret a detected thermal
         // CoreMotion collects at 100 hz, with an average trim speed of 30 km/h
         // or 8.3 m/s, yields an average sample of 12.5m travelled at MAX_ACCEL_HISTORY = 150
-        if abs(zAccelerationHistory.average) > 0.1 {
-            verticalAccelerationMetresPerSecondSquared = (zAccelerationHistory.average * 9.81) - 1
-            #warning("TODO - Track thermals")
+        verticalAccelerationMetresPerSecondSquared = (zAccelerationHistory.average * 9.81)
+        
+        // 3 - Try to do a kalman filter
+
+        // 1.5s of barometric displacement and 1.5s of average vertical acceleration
+        if verticalAccelerationMetresPerSecondSquared > verticalVelocityMetresPerSecond {
+            // Altimeter lagging
+            let variance = (verticalAccelerationMetresPerSecondSquared - verticalVelocityMetresPerSecond) * 0.5
+            verticalVelocityMetresPerSecond = verticalVelocityMetresPerSecond + variance
+        } else {
+            // Altimeter leading
+            let variance = (verticalVelocityMetresPerSecond - verticalAccelerationMetresPerSecondSquared) * 0.5
+            verticalVelocityMetresPerSecond = verticalVelocityMetresPerSecond - variance
+        }
+        
+        if verticalVelocityMetresPerSecond > 0.5 {
+            nearestThermal = currentCoords
         }
     }
     
@@ -248,6 +265,24 @@ extension FlightComputer {
             gpsAltitude = locations.first!.altitude
             gpsSpeed = locations.first!.speed != -1.0 ? locations.first!.speed : gpsSpeed
             gpsCourse = locations.first!.course
+            
+            if nearestThermal != nil {
+                let latX  = currentCoords.latitude
+                let longX = currentCoords.longitude
+                let latY  = nearestThermal!.latitude
+                let longY = nearestThermal!.longitude
+                let deltaLong = longX > longY ? longX - longY : longY - longX
+                
+                let X = cos(latY) * sin(deltaLong)
+                let Y = cos(latX) * sin(latY) - sin(latX) * cos(latY) * cos(deltaLong)
+                
+                headingToNearestThermal = atan2(X, Y) * 57.3
+                
+                let currentLocation = CLLocation(latitude: latX, longitude: longX)
+                let thermalLocation = CLLocation(latitude: latY, longitude: longY)
+                
+                distanceToNearestThermal = thermalLocation.distance(from: currentLocation)
+            }
             
             // Detect a launch
             if !inFlight && gpsSpeed > 5.5 {
@@ -432,9 +467,3 @@ extension FlightComputer {
     }
 }
 
-extension Double {
-    func rounded(toPlaces places:Int) -> Double {
-        let divisor = pow(10.0, Double(places))
-        return (self * divisor).rounded() / divisor
-    }
-}

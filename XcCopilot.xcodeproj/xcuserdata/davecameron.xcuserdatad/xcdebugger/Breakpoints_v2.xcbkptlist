@@ -3,4 +3,54 @@
    uuid = "0CB99B42-A99F-41E8-AF02-B09ADA540263"
    type = "1"
    version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "5F391ABD-D370-4E97-8AF3-E6C65257EBD6"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "XcCopilot/ViewModel/FlightRecorder.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "175"
+            endingLineNumber = "175"
+            landmarkName = "createFlightToImport(forUrl:)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "5F391ABD-D370-4E97-8AF3-E6C65257EBD6 - 847a679ff8c44357"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(3) suspend resume partial function for XcCopilot.FlightRecorder.createFlightToImport(forUrl: Foundation.URL) async throws -&gt; XcCopilot.Flight"
+                  moduleName = "XcCopilot"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/davecameron/Developer/XCode/XcCopilot/XcCopilot/ViewModel/FlightRecorder.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "175"
+                  endingLineNumber = "175"
+                  offsetFromSymbolStart = "13116">
+               </Location>
+               <Location
+                  uuid = "5F391ABD-D370-4E97-8AF3-E6C65257EBD6 - 847a679ff8c44357"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(3) suspend resume partial function for XcCopilot.FlightRecorder.createFlightToImport(forUrl: Foundation.URL) async throws -&gt; XcCopilot.Flight"
+                  moduleName = "XcCopilot"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/davecameron/Developer/XCode/XcCopilot/XcCopilot/ViewModel/FlightRecorder.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "175"
+                  endingLineNumber = "175"
+                  offsetFromSymbolStart = "13140">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
 </Bucket>

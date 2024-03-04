@@ -6,14 +6,15 @@
 //
 
 import Foundation
+import SwiftData
 
 protocol FlightRecorderService {
     var recording: Bool { get set }
     
     func startRecording()
-    func stopRecording()
+    func stopRecording(context: ModelContext)
     func storeFrame(frame: FlightFrame)
-    func importFlight()
-    func exportFlight()
+    func createFlightToImport(forUrl url: URL) async throws -> Flight
+    func exportFlight(flightToExport: Flight) async throws
 }
 

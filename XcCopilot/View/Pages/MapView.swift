@@ -41,7 +41,7 @@ struct MapView: View {
                     }
                     
                     Spacer()
-                    NearestThermalView(direction: vm.nearestThermalDistance, distance: vm.nearestThermalDistance)
+                    NearestThermalView(direction: vm.nearestThermalHeading, distance: vm.nearestThermalDistance)
                     
                     MapInstrumentView(
                         vm: vm,
@@ -116,8 +116,7 @@ struct NearestThermalView: View {
     var distance: Double = 0
     
     var body: some View {
-        if true {
-//        if distance != 0 {
+        if !distance.isNaN && !direction.isNaN {
             HStack {
                 Spacer()
                 VStack(spacing: 10) {
@@ -155,7 +154,7 @@ struct MapInstrumentView: View {
             VStack(alignment: .center) {
                 Text("Vertical Speed")
                     .font(.subheadline)
-                Text("\(verticalVelocityMetresPerSecond, specifier: "%.1f") \(vm.elevationUnit.rawValue)")
+                Text("\(verticalVelocityMetresPerSecond, specifier: "%.1f") \(vm.verticalSpeedUnit.rawValue)")
                     .font(.headline)
             }
             Divider()

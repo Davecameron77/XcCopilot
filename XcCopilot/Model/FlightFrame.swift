@@ -8,8 +8,10 @@
 import Foundation
 import CoreLocation
 import CoreMotion
+import SwiftData
 
-struct FlightFrame {
+@Model
+class FlightFrame {
     init(
         pitchInDegrees: Double,
         rollInDegrees: Double,
@@ -27,31 +29,44 @@ struct FlightFrame {
         self.pitchInDegrees = pitchInDegrees
         self.rollInDegrees = rollInDegrees
         self.yawInDegrees = yawInDegrees
-        self.currentAcceleration = acceleration
-        self.currentGravity = gravity
+        self.accelerationX = acceleration.x
+        self.accelerationY = acceleration.y
+        self.accelerationZ = acceleration.z
+        self.gravityX = gravity.x
+        self.gravityY = gravity.y
+        self.gravityZ = gravity.z
         self.currentGPSAltitude = gpsAltitude
         self.currentGPSCourse = gpsCourse
-        self.currentGPSCoords = gpsCoords
+        self.latitude = gpsCoords.latitude
+        self.longitude = gpsCoords.longitude
         self.currentBaroAltitude = baroAltitude
         self.currentVerticalVelocity = verticalVelocity
     }
     
     let id: UUID
-    let timestamp: Date
+    var timestamp: Date
+    
     // Motion
-    let pitchInDegrees: Double
-    let rollInDegrees: Double
-    let yawInDegrees: Double
-    let currentAcceleration: CMAcceleration
-    let currentGravity: CMAcceleration
+    var pitchInDegrees: Double
+    var rollInDegrees: Double
+    var yawInDegrees: Double
+    var accelerationX: Double
+    var accelerationY: Double
+    var accelerationZ: Double
+    var gravityX: Double
+    var gravityY: Double
+    var gravityZ: Double
     
     // GPS
     let currentGPSAltitude: Double
     let currentGPSCourse: Double
-    let currentGPSCoords: CLLocationCoordinate2D
+    let latitude: Double
+    let longitude: Double
     
     // Barometer
     let currentBaroAltitude: Double
     let currentVerticalVelocity: Double
+    
+    var flight: Flight?
 }
 

@@ -32,6 +32,8 @@ protocol FlightComputerService {
     var glideRangeInMetres: Double { get }
     var verticalVelocityMetresPerSecond: Double { get }
     var verticalAccelerationMetresPerSecondSquared: Double { get }
+    var headingToNearestThermal: Double { get }
+    var distanceToNearestThermal: Double { get }
     var flightTime: TimeInterval { get }
     
     func startFlying()

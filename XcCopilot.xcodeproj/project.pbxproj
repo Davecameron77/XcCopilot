@@ -7,16 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B20188E02B3239E3009FD267 /* TextInstrument.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20188DF2B3239E3009FD267 /* TextInstrument.swift */; };
-		B244F4A22B250799001ADB1D /* GaugeInstrument.swift in Sources */ = {isa = PBXBuildFile; fileRef = B244F4A12B250799001ADB1D /* GaugeInstrument.swift */; };
 		B247F0E92B312D320063FCA7 /* FlightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B247F0E82B312D320063FCA7 /* FlightView.swift */; };
 		B247F0EB2B314D060063FCA7 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B247F0EA2B314D060063FCA7 /* Extensions.swift */; };
 		B247F0ED2B314E120063FCA7 /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = B247F0EC2B314E120063FCA7 /* Enums.swift */; };
 		B25144662B40F57D00364C7F /* FlightRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B25144652B40F57C00364C7F /* FlightRecorder.swift */; };
-		B254411E2B58B9F700C476EF /* ViewModelDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B254411D2B58B9F700C476EF /* ViewModelDelegate.swift */; };
 		B25441202B58DE4B00C476EF /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B254411F2B58DE4B00C476EF /* SoundManager.swift */; };
 		B276F8A12B34D2C3001A7CF7 /* Glider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B276F8A02B34D2C3001A7CF7 /* Glider.swift */; };
-		B29C015F2B263C5400010966 /* CompassInstrumentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29C015E2B263C5400010966 /* CompassInstrumentView.swift */; };
+		B28BC7842B75D212005A8CB8 /* 200.wav in Resources */ = {isa = PBXBuildFile; fileRef = B28BC7822B75D212005A8CB8 /* 200.wav */; };
+		B28BC7852B75D212005A8CB8 /* 1000.wav in Resources */ = {isa = PBXBuildFile; fileRef = B28BC7832B75D212005A8CB8 /* 1000.wav */; };
 		B2A117DF2B1EC4B4003447E2 /* XcCopilotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A117DE2B1EC4B4003447E2 /* XcCopilotApp.swift */; };
 		B2A117E32B1EC4B5003447E2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B2A117E22B1EC4B5003447E2 /* Assets.xcassets */; };
 		B2A117E62B1EC4B5003447E2 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B2A117E52B1EC4B5003447E2 /* Preview Assets.xcassets */; };
@@ -32,23 +30,19 @@
 		B2A118042B1EC680003447E2 /* FlightRecorderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A118032B1EC680003447E2 /* FlightRecorderService.swift */; };
 		B2A118062B1EC69F003447E2 /* FlightComputer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A118052B1EC69F003447E2 /* FlightComputer.swift */; };
 		B2A118082B1EC6BB003447E2 /* XcCopilotViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A118072B1EC6BB003447E2 /* XcCopilotViewModel.swift */; };
-		B2E766F12B53143D00A2A1E4 /* SmallTextInstrument.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E766F02B53143D00A2A1E4 /* SmallTextInstrument.swift */; };
-		B2E766F72B54E3A600A2A1E4 /* 1000.wav in Resources */ = {isa = PBXBuildFile; fileRef = B2E766F52B54E3A600A2A1E4 /* 1000.wav */; };
-		B2E766F82B54E3A600A2A1E4 /* 200.wav in Resources */ = {isa = PBXBuildFile; fileRef = B2E766F62B54E3A600A2A1E4 /* 200.wav */; };
+		B2E1800A2B94530B00C3C9CA /* ViewModelDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E180092B94530B00C3C9CA /* ViewModelDelegate.swift */; };
 		B2F1FCD62B4FA28700396D91 /* Vector3.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2F1FCD52B4FA28700396D91 /* Vector3.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		B20188DF2B3239E3009FD267 /* TextInstrument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInstrument.swift; sourceTree = "<group>"; };
-		B244F4A12B250799001ADB1D /* GaugeInstrument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaugeInstrument.swift; sourceTree = "<group>"; };
 		B247F0E82B312D320063FCA7 /* FlightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightView.swift; sourceTree = "<group>"; };
 		B247F0EA2B314D060063FCA7 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		B247F0EC2B314E120063FCA7 /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
 		B25144652B40F57C00364C7F /* FlightRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightRecorder.swift; sourceTree = "<group>"; };
-		B254411D2B58B9F700C476EF /* ViewModelDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ViewModelDelegate.swift; path = ../../../../../../.Trash/ViewModelDelegate.swift; sourceTree = "<group>"; };
 		B254411F2B58DE4B00C476EF /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
 		B276F8A02B34D2C3001A7CF7 /* Glider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Glider.swift; sourceTree = "<group>"; };
-		B29C015E2B263C5400010966 /* CompassInstrumentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompassInstrumentView.swift; sourceTree = "<group>"; };
+		B28BC7822B75D212005A8CB8 /* 200.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = 200.wav; sourceTree = "<group>"; };
+		B28BC7832B75D212005A8CB8 /* 1000.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = 1000.wav; sourceTree = "<group>"; };
 		B2A117DB2B1EC4B4003447E2 /* XcCopilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = XcCopilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B2A117DE2B1EC4B4003447E2 /* XcCopilotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XcCopilotApp.swift; sourceTree = "<group>"; };
 		B2A117E22B1EC4B5003447E2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -66,9 +60,7 @@
 		B2A118052B1EC69F003447E2 /* FlightComputer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightComputer.swift; sourceTree = "<group>"; };
 		B2A118072B1EC6BB003447E2 /* XcCopilotViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XcCopilotViewModel.swift; sourceTree = "<group>"; };
 		B2B87CBF2B2FB18C004456C3 /* XcCopilot.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = XcCopilot.entitlements; sourceTree = "<group>"; };
-		B2E766F02B53143D00A2A1E4 /* SmallTextInstrument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallTextInstrument.swift; sourceTree = "<group>"; };
-		B2E766F52B54E3A600A2A1E4 /* 1000.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = 1000.wav; sourceTree = "<group>"; };
-		B2E766F62B54E3A600A2A1E4 /* 200.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = 200.wav; sourceTree = "<group>"; };
+		B2E180092B94530B00C3C9CA /* ViewModelDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelDelegate.swift; sourceTree = "<group>"; };
 		B2F1FCD52B4FA28700396D91 /* Vector3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vector3.swift; sourceTree = "<group>"; };
 		B2F83CF72B50E70A00E6A5D2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -149,7 +141,6 @@
 		B2A117EE2B1EC4CA003447E2 /* View */ = {
 			isa = PBXGroup;
 			children = (
-				B2D440762B26CCBB00F3FD2A /* Components */,
 				B2A117F52B1EC5D0003447E2 /* Pages */,
 				B2A117EF2B1EC4D4003447E2 /* HomeView.swift */,
 			);
@@ -174,27 +165,16 @@
 				B2A117FF2B1EC64F003447E2 /* FlightAnalyzerService.swift */,
 				B2A118012B1EC66A003447E2 /* FlightComputerService.swift */,
 				B2A118032B1EC680003447E2 /* FlightRecorderService.swift */,
-				B254411D2B58B9F700C476EF /* ViewModelDelegate.swift */,
+				B2E180092B94530B00C3C9CA /* ViewModelDelegate.swift */,
 			);
 			path = Protocols;
-			sourceTree = "<group>";
-		};
-		B2D440762B26CCBB00F3FD2A /* Components */ = {
-			isa = PBXGroup;
-			children = (
-				B244F4A12B250799001ADB1D /* GaugeInstrument.swift */,
-				B29C015E2B263C5400010966 /* CompassInstrumentView.swift */,
-				B20188DF2B3239E3009FD267 /* TextInstrument.swift */,
-				B2E766F02B53143D00A2A1E4 /* SmallTextInstrument.swift */,
-			);
-			path = Components;
 			sourceTree = "<group>";
 		};
 		B2E766F42B54E39B00A2A1E4 /* Tones */ = {
 			isa = PBXGroup;
 			children = (
-				B2E766F62B54E3A600A2A1E4 /* 200.wav */,
-				B2E766F52B54E3A600A2A1E4 /* 1000.wav */,
+				B28BC7822B75D212005A8CB8 /* 200.wav */,
+				B28BC7832B75D212005A8CB8 /* 1000.wav */,
 			);
 			path = Tones;
 			sourceTree = "<group>";
@@ -272,9 +252,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B28BC7842B75D212005A8CB8 /* 200.wav in Resources */,
+				B28BC7852B75D212005A8CB8 /* 1000.wav in Resources */,
 				B2A117E62B1EC4B5003447E2 /* Preview Assets.xcassets in Resources */,
-				B2E766F82B54E3A600A2A1E4 /* 200.wav in Resources */,
-				B2E766F72B54E3A600A2A1E4 /* 1000.wav in Resources */,
 				B2A117E32B1EC4B5003447E2 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -287,20 +267,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				B2A117F92B1EC600003447E2 /* InstrumentView.swift in Sources */,
-				B244F4A22B250799001ADB1D /* GaugeInstrument.swift in Sources */,
 				B276F8A12B34D2C3001A7CF7 /* Glider.swift in Sources */,
 				B2A118022B1EC66A003447E2 /* FlightComputerService.swift in Sources */,
 				B2A117F02B1EC4D4003447E2 /* HomeView.swift in Sources */,
 				B247F0ED2B314E120063FCA7 /* Enums.swift in Sources */,
 				B2A117F72B1EC5D9003447E2 /* MapView.swift in Sources */,
-				B254411E2B58B9F700C476EF /* ViewModelDelegate.swift in Sources */,
 				B2A117FD2B1EC624003447E2 /* SettingsView.swift in Sources */,
 				B2A117F42B1EC573003447E2 /* FlightFrame.swift in Sources */,
 				B247F0E92B312D320063FCA7 /* FlightView.swift in Sources */,
-				B29C015F2B263C5400010966 /* CompassInstrumentView.swift in Sources */,
-				B2E766F12B53143D00A2A1E4 /* SmallTextInstrument.swift in Sources */,
-				B20188E02B3239E3009FD267 /* TextInstrument.swift in Sources */,
 				B25441202B58DE4B00C476EF /* SoundManager.swift in Sources */,
+				B2E1800A2B94530B00C3C9CA /* ViewModelDelegate.swift in Sources */,
 				B2F1FCD62B4FA28700396D91 /* Vector3.swift in Sources */,
 				B2A117FB2B1EC613003447E2 /* LogbookView.swift in Sources */,
 				B2A118042B1EC680003447E2 /* FlightRecorderService.swift in Sources */,
@@ -452,15 +428,14 @@
 				INFOPLIST_FILE = XcCopilot/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "XC Copilot";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = Required;
 				INFOPLIST_KEY_NSLocationUsageDescription = Required;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = Required;
 				INFOPLIST_KEY_NSMotionUsageDescription = Required;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -496,15 +471,14 @@
 				INFOPLIST_FILE = XcCopilot/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "XC Copilot";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = Required;
 				INFOPLIST_KEY_NSLocationUsageDescription = Required;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = Required;
 				INFOPLIST_KEY_NSMotionUsageDescription = Required;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

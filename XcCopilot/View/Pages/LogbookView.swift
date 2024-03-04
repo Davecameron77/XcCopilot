@@ -10,9 +10,13 @@ import UniformTypeIdentifiers
 
 struct LogbookView: View {
     @EnvironmentObject var vm: XcCopilotViewModel
-    private let formatter = DateComponentsFormatter()
+    @Environment(\.modelContext) var context
+    
     @State private var importerShowing = false
     
+    let igcType = UTType(exportedAs: "ca.tinyweb.xccopilot.igc")
+    private let formatter = DateComponentsFormatter()
+        
     var body: some View {
         NavigationView {
             VStack {
@@ -24,11 +28,19 @@ struct LogbookView: View {
                 .padding()
                 .fileImporter(
                     isPresented: $importerShowing,
-                    allowedContentTypes: [.pdf]) { result in
+                    allowedContentTypes: [.item]) { result in
+                        
                         switch result {
                         case .success(let url):
-                            print(url)
-                        //use `url.startAccessingSecurityScopedResource()` if you are going to read the data
+                            Task {
+                                if url.startAccessingSecurityScopedResource() {
+                                    if let flight = await vm.importIgcFile(forUrl: url) {
+                                        context.insert(flight)
+                                    } else {
+                                        vm.showAlert(withText: "Error importing flight")
+                                    }
+                                }
+                            }
                         case .failure(let error):
                             print(error)
                         }

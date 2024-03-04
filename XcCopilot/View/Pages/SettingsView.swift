@@ -10,10 +10,7 @@ import SwiftData
 
 struct SettingsView: View {
     @EnvironmentObject private var vm: XcCopilotViewModel
-    @Environment(\.modelContext) var context
     @FocusState var isInputActive: Bool
-    
-    @Query(sort: \Glider.name) var gliders: [Glider]
     
     var body: some View {
         NavigationStack {
@@ -50,21 +47,6 @@ struct SettingsView: View {
                         VStack(alignment: .leading) {
                             Text("Vario Audio: \(String(format: "%.0f", vm.varioVolume)) %")
                             Slider(value: $vm.varioVolume, in:0...100, step: 10)
-                        }
-                        Picker("Gauge Type", selection: $vm.gaugeType) {
-                            ForEach(GaugeType.allCases, id: \.self) { type in
-                                Text(type.rawValue).tag(type)
-                            }
-                        }
-                    }
-                    
-                    Section("Glider Info") {
-                        TextField("Glider Model", text: $vm.gliderName)
-                        VStack(alignment: .leading) {
-                            Text("Trim Speed: \(String(format: "%.0f", vm.trimSpeed)) km/h")
-                            Slider(value: $vm.trimSpeed, in: 28...40) {
-                                Text("Trim Speed: \(String(format: "%.0f", vm.trimSpeed)) km/h")
-                            }
                         }
                     }
                 }

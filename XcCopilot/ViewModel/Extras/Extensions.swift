@@ -60,3 +60,42 @@ extension Array where Element: BinaryFloatingPoint {
     }
 
 }
+
+extension String {
+    func subString(from: Int, to: Int) -> String {
+       let startIndex = self.index(self.startIndex, offsetBy: from)
+       let endIndex = self.index(self.startIndex, offsetBy: to)
+       return String(self[startIndex..<endIndex])
+    }
+}
+
+extension Double {
+    func rounded(toPlaces places:Int) -> Double {
+        let divisor = pow(10.0, Double(places))
+        return (self * divisor).rounded() / divisor
+    }
+}
+
+extension String {
+    mutating func addNewLine() {
+        self.write("\r\n")
+    }
+}
+
+extension CLLocationCoordinate2D {
+    func coordinateToDMS() -> String {
+        let latDms = toDms(dms: latitude)
+        let lonDms = toDms(dms: longitude)
+
+        let format = "%02d%02d%03d%@" + "%03d%02d%03d%@"
+        return String(format: format, latDms.0, latDms.1, latDms.2, latitude >= 0 ? "N" : "S",
+                      lonDms.0, lonDms.1, lonDms.2, longitude >= 0 ? "E" : "W")
+    }
+    
+    private func toDms(dms: Double) -> (Int, Int, Int) {
+        let degrees = abs(Int(dms))
+        let minutes = Int((abs(dms) - abs(dms.rounded(.towardZero))) * 60)
+        let seconds = Int(((abs(dms) - abs(dms.rounded(.towardZero)) - (Double(minutes)/60.0)) * 3600).rounded(.toNearestOrAwayFromZero))
+        return (deg:degrees, min:minutes, sec:seconds)
+    }
+}

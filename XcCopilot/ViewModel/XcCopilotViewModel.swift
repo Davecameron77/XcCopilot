@@ -12,9 +12,12 @@ import MapKit
 import SwiftUI
 import os
 import WeatherKit
+import UniformTypeIdentifiers
 
 class XcCopilotViewModel: ObservableObject,
                           ViewModelDelegate {
+    
+    @Environment(\.modelContext) var context
     
     var logger: Logger? = .init(
         subsystem: Bundle.main.bundleIdentifier!,
@@ -42,7 +45,7 @@ class XcCopilotViewModel: ObservableObject,
     @Published var calculatedElevation: Double                        = 0.0
     @Published var verticalVelocityMetresPerSecond: Double            = 0.0
     @Published var glideRangeInMetres: Double                         = 0.0
-    @Published var nearestThermalCourse: Double                       = 0.0
+    @Published var nearestThermalHeading: Double                      = 0.0
     @Published var nearestThermalDistance: Double                     = 0.0
     
     // Compass
@@ -112,13 +115,6 @@ class XcCopilotViewModel: ObservableObject,
            }
         }
     }
-    @AppStorage("gaugeType") var gaugeType: GaugeType = .gauge {
-        willSet {
-           DispatchQueue.main.async {
-              self.objectWillChange.send()
-           }
-        }
-    }
     // Glider metadata
     @AppStorage("gliderName") var gliderName: String = "Unnamed Glider" {
         willSet {
@@ -137,6 +133,8 @@ class XcCopilotViewModel: ObservableObject,
     
     let REFRESH_FREQUENCY: Double = 0.1
     private var updateTimer: Timer?
+    private var audioTimer: Timer?
+    
     private var currentWeatherTimestamp: Date = Date.distantPast
     var readyToFly: Bool { flightComputer.readyToFly }
     var flightComputer: FlightComputerService
@@ -152,15 +150,6 @@ class XcCopilotViewModel: ObservableObject,
         flightComputer = FlightComputer()
         flightRecorder = FlightRecorder()
         flightComputer.delegate = self
-        
-        #if DEBUG
-        let dummyOne = Flight(isDummy: true)
-        dummyOne.flightTitle = "Dummy Flight One"
-        logbook.append(dummyOne)
-        
-        let dummyTwo = Flight(isDummy: true)
-        logbook.append(dummyTwo)
-        #endif
         
         /// Run loop for the ViewModel, polling the flight computer and updating display vars
         updateTimer = Timer.scheduledTimer(withTimeInterval: REFRESH_FREQUENCY,
@@ -193,11 +182,17 @@ class XcCopilotViewModel: ObservableObject,
         self.calculatedElevation = self.elevationUnits(elevationMetres: self.flightComputer.calculatedElevation)
         self.magneticHeading = self.flightComputer.magneticHeading
         
+        self.nearestThermalHeading = self.flightComputer.headingToNearestThermal
+        self.nearestThermalDistance = self.flightComputer.distanceToNearestThermal
+        
         flightTime = Duration.seconds(self.flightComputer.flightTime)
         
         playVarioSound()
     }
     
+    ///
+    /// Plays tones based on current vertical velocity
+    ///
     func playVarioSound() {
         // Set playback frequency based on vertical velocity
         var tonesPlayed = 0
@@ -205,32 +200,32 @@ class XcCopilotViewModel: ObservableObject,
         var varioFrequency = 0.0
         
         switch abs(self.verticalVelocityMetresPerSecond) {
-        case 0..<1:
+        case 0..<0.25:
+            // Trivial displacement
+            return
+        case 0.25..<1:
+            // Light displacement 1hz frequency
             varioFrequency = 1.0
             tonesToPlay = 1
         case 1..<2:
+            // Medium displacement 2hz frequency
             varioFrequency = 0.5
             tonesToPlay = 2
         default:
+            // Heavy displacement 4hz frequency
             varioFrequency = 0.25
             tonesToPlay = 4
         }
         
-        if self.verticalVelocityMetresPerSecond > 0.01 {
-            if flightComputer.inFlight && audioActive {
-                let _ = Timer.scheduledTimer(withTimeInterval: varioFrequency, repeats: true) { timer in
-                    if tonesPlayed <= tonesToPlay {
-                        SoundManager.shared.playAscendingTone()
-                        tonesPlayed += 1
-                    }
-                }
-            }
-        } else if self.verticalVelocityMetresPerSecond < -0.01 {
-            if flightComputer.inFlight && audioActive {
-                let _ = Timer.scheduledTimer(withTimeInterval: varioFrequency, repeats: true) { timer in
-                    if tonesPlayed <= tonesToPlay {
-                        SoundManager.shared.playDescendingTone()
-                    }
+        // Only schedule tones on signifigant displacement
+        if flightComputer.inFlight && audioActive && abs(self.verticalVelocityMetresPerSecond) > 0.25 {
+            // Cancel existing audio
+            audioTimer?.invalidate()
+            
+            audioTimer = Timer.scheduledTimer(withTimeInterval: varioFrequency, repeats: true) { timer in
+                if tonesPlayed <= tonesToPlay {
+                    self.verticalVelocityMetresPerSecond > 0 ? SoundManager.shared.playAscendingTone() : SoundManager.shared.playDescendingTone()
+                    tonesPlayed += 1
                 }
             }
         }
@@ -291,6 +286,20 @@ class XcCopilotViewModel: ObservableObject,
             }
             self.flightRecorder.storeFrame(frame: frame)
         }
+    }
+    
+    ///
+    /// Imports an IGC file
+    ///
+    func importIgcFile(forUrl url: URL) async -> Flight? {
+        return try? await flightRecorder.createFlightToImport(forUrl: url)
+    }
+    
+    ///
+    /// Exports an IGC file
+    ///
+    func exportIgcFile(flight: Flight) async {
+        try? await flightRecorder.exportFlight(flightToExport: flight)
     }
 }
 
