@@ -14,8 +14,7 @@ import os
 import WeatherKit
 import UniformTypeIdentifiers
 
-class XcCopilotViewModel: ObservableObject,
-                          ViewModelDelegate {
+class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     
     @Environment(\.modelContext) var context
     

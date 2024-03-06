@@ -6,11 +6,13 @@
 //
 
 import SwiftUI
+import SwiftData
 import UniformTypeIdentifiers
 
 struct LogbookView: View {
     @EnvironmentObject var vm: XcCopilotViewModel
     @Environment(\.modelContext) var context
+    @Query(sort: \Flight.flightStartDate, order: .reverse) var flights: [Flight]
     
     @State private var importerShowing = false
     
@@ -27,27 +29,18 @@ struct LogbookView: View {
                 .buttonStyle(.borderedProminent)
                 .padding()
                 .fileImporter(
-                    isPresented: $importerShowing,
-                    allowedContentTypes: [.item]) { result in
-                        
+                    isPresented: $importerShowing, allowedContentTypes: [.item]) { result in
                         switch result {
                         case .success(let url):
-                            Task {
-                                if url.startAccessingSecurityScopedResource() {
-                                    if let flight = await vm.importIgcFile(forUrl: url) {
-                                        context.insert(flight)
-                                    } else {
-                                        vm.showAlert(withText: "Error importing flight")
-                                    }
-                                }
-                            }
+                            importFlight(forUrl: url)
                         case .failure(let error):
                             print(error)
                         }
                     }
                 
                 List {
-                    ForEach(vm.logbook) { flight in
+                    ForEach(flights) { flight in
+                        @Bindable var flight = flight
                         NavigationLink {
                             FlightView(flight: flight)
                         } label: {
@@ -57,20 +50,40 @@ struct LogbookView: View {
                                 HStack {
                                     Text(flight.flightStartDate, style: .date)
                                     Spacer()
-                                    Text(formatter.string(from: flight.flightDuration)!)
+                                    Text(flight.flightDuration)
                                 }
                             }
                         }
                     }
-                    .onDelete { vm.logbook.remove(atOffsets: $0) }
+                    .onDelete(perform: deleteFlight)
                     .onMove { vm.logbook.move(fromOffsets: $0, toOffset: $1) }
                 }
+                .listStyle(.inset)
                 .navigationTitle("Logbook")
                 .toolbar {
                     EditButton()
                 }
 
             }
+        }
+    }
+    
+    func importFlight(forUrl url: URL) {
+        Task { @MainActor in
+            if url.startAccessingSecurityScopedResource() {
+                if let flight = await vm.importIgcFile(forUrl: url) {
+                    context.insert(flight)
+                } else {
+                    vm.showAlert(withText: "Error importing flight")
+                }
+            }
+        }
+    }
+    
+    func deleteFlight(_ indexSet: IndexSet) {
+        for index in indexSet {
+            let flight = flights[index]
+            context.delete(flight)
         }
     }
 }

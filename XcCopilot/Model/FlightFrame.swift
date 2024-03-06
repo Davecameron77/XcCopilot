@@ -24,7 +24,7 @@ class FlightFrame {
         baroAltitude: Double,
         verticalVelocity: Double
     ) {
-        self.id = UUID()
+        self.id = UUID().uuidString
         self.timestamp = Date.now
         self.pitchInDegrees = pitchInDegrees
         self.rollInDegrees = rollInDegrees
@@ -43,7 +43,7 @@ class FlightFrame {
         self.currentVerticalVelocity = verticalVelocity
     }
     
-    let id: UUID
+    let id: String
     var timestamp: Date
     
     // Motion
@@ -60,13 +60,13 @@ class FlightFrame {
     // GPS
     let currentGPSAltitude: Double
     let currentGPSCourse: Double
-    let latitude: Double
+    let latitude: Double 
     let longitude: Double
     
     // Barometer
     let currentBaroAltitude: Double
     let currentVerticalVelocity: Double
     
-    var flight: Flight?
+    let flight: Flight?
 }
 

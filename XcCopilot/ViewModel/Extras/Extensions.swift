@@ -8,18 +8,6 @@
 import SwiftUI
 import MapKit
 
-struct InstrumentBackground: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .padding()
-            .frame(minWidth: 75, idealWidth: 125, maxWidth: 125, minHeight: 75, idealHeight: 125, maxHeight: 125)
-            .aspectRatio(contentMode: .fit)
-            .background(Color(UIColor.systemBackground))
-            .opacity(0.65)
-            .cornerRadius(10)
-    }
-}
-
 extension CLLocationCoordinate2D {
     static var myLocation: CLLocationCoordinate2D {
         return .init(latitude: 49.24348,
@@ -67,18 +55,16 @@ extension String {
        let endIndex = self.index(self.startIndex, offsetBy: to)
        return String(self[startIndex..<endIndex])
     }
+    
+    mutating func addNewLine() {
+        self.write("\r\n")
+    }
 }
 
 extension Double {
     func rounded(toPlaces places:Int) -> Double {
         let divisor = pow(10.0, Double(places))
         return (self * divisor).rounded() / divisor
-    }
-}
-
-extension String {
-    mutating func addNewLine() {
-        self.write("\r\n")
     }
 }
 
@@ -98,4 +84,29 @@ extension CLLocationCoordinate2D {
         let seconds = Int(((abs(dms) - abs(dms.rounded(.towardZero)) - (Double(minutes)/60.0)) * 3600).rounded(.toNearestOrAwayFromZero))
         return (deg:degrees, min:minutes, sec:seconds)
     }
+}
+
+extension TimeInterval {
+    var hourMinuteSecondMS: String {
+        String(format:"%d:%02d:%02d.%03d", hour, minute, second, millisecond)
+    }
+    var minuteSecondMS: String {
+        String(format:"%d:%02d.%03d", minute, second, millisecond)
+    }
+    var hour: Int {
+        Int((self/3600).truncatingRemainder(dividingBy: 3600))
+    }
+    var minute: Int {
+        Int((self/60).truncatingRemainder(dividingBy: 60))
+    }
+    var second: Int {
+        Int(truncatingRemainder(dividingBy: 60))
+    }
+    var millisecond: Int {
+        Int((self*1000).truncatingRemainder(dividingBy: 1000))
+    }
+}
+
+enum DataError: Error {
+    case invalidData(String)
 }

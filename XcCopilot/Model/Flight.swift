@@ -11,7 +11,7 @@ import WeatherKit
 import SwiftData
 
 @Model
-class Flight: Identifiable {    
+class Flight {
     ///
     /// Basic Init
     ///
@@ -22,6 +22,9 @@ class Flight: Identifiable {
         self.flightTitle  = "Unknown Flight: \(id.prefix(4))"
     }
     
+    ///
+    /// Init for dummy flight
+    ///
     init(isDummy: Bool) {
         let id = UUID().uuidString
         flightID = id
@@ -35,22 +38,26 @@ class Flight: Identifiable {
     var igcID: String?
     var flightTitle: String
     var flightStartDate: Date = Date.distantPast
-    var flightEndDate: Date   = Date.distantPast
-    var flightDuration: TimeInterval {
-        flightEndDate - flightStartDate
-    }
+    var flightEndDate: Date = Date.distantFuture
+    var flightDuration: String = "00:00:00"
+    var launchLatitude: Double = 0.0
+    var launchLongitude: Double = 0.0
+    var landLatitude: Double = 0.0
+    var landLongitude: Double = 0.0
     var flightLocation: String?
+    
+    // Weather vars
     var temperature: Double = 0.0
-    var temperatureUnit: String = UnitTemperature.celsius.symbol
+    var temperatureUnit: String?
     var humidity: Double = 0.0
     var dewpoint: Double = 0.0
-    var dewpointUnit: String = UnitTemperature.celsius.symbol
+    var dewpointUnit: String?
     var pressure: Double = 0.0
-    var pressureUnit: String = UnitPressure.bars.symbol
+    var pressureUnit: String?
     var windSpeed: Double = 0.0
     var windGust: Double = 0.0
     var windDirection: Double = 0.0
-    var windUnit: String = ""
+    var windUnit: String?
     var cloudCover: Double = 0.0
     
     var flightMinLatitude: Double = 0.0
@@ -75,6 +82,7 @@ class Flight: Identifiable {
     var gliderName: String?
     var gliderTrimSpeed: Double = 0.0
     var gliderRegistration: String?
+    
     @Relationship(deleteRule: .cascade) var flightFrames: [FlightFrame]
     
     static let dummyFlight = Flight(isDummy: true)

@@ -55,15 +55,15 @@ class FlightRecorder: FlightRecorderService {
     ///
     /// Imports a .IGC file
     ///
-    func createFlightToImport(forUrl url: URL) async throws -> Flight {
+    func createFlightToImport(forUrl url: URL) async throws -> Flight? {
         let flight = Flight()
+        var flightDate: Date = Date.now
         var frames = [FlightFrame]()
                
         for try await line in url.lines {
-            print(line)
+            
             if line.starts(with: "A") {
                 // Flight ID
-                
                 flight.igcID = line.subString(from: 5, to: line.count).trimmingCharacters(in: .whitespacesAndNewlines)
                 
             } else if line.starts(with: "H") {
@@ -76,7 +76,7 @@ class FlightRecorder: FlightRecorderService {
                     dateComponents.day   = Int(date.subString(from: 1, to: 2))
                     dateComponents.month = Int(date.subString(from: 2, to: 4))
                     dateComponents.year  = (Int(date.subString(from: 4, to: 6))! + 2000)
-                    flight.flightStartDate = Calendar.current.date(from: dateComponents)!
+                    flightDate = Calendar.current.date(from: dateComponents)!
                 } else if line.starts(with: "HFFXA") {
                     // Fix Accuracy
                     flight.gpsPrecision = Int(line.subString(from: 5, to: line.count))
@@ -124,19 +124,23 @@ class FlightRecorder: FlightRecorderService {
             } else if line.starts(with: "B") {
                 
                 var dateComponents    = DateComponents()
-                dateComponents.year   = flight.flightStartDate.get(.year)
-                dateComponents.month  = flight.flightStartDate.get(.month)
-                dateComponents.day    = flight.flightStartDate.get(.day)
-                dateComponents.hour   = Int(line.subString(from: 1, to: 2).trimmingCharacters(in: .whitespacesAndNewlines))
-                dateComponents.minute = Int(line.subString(from: 3, to: 4).trimmingCharacters(in: .whitespacesAndNewlines))
-                dateComponents.second = Int(line.subString(from: 5, to: 6).trimmingCharacters(in: .whitespacesAndNewlines))
+                dateComponents.year   = flightDate.get(.year)
+                dateComponents.month  = flightDate.get(.month)
+                dateComponents.day    = flightDate.get(.day)
+                dateComponents.hour   = Int(line.subString(from: 1, to: 3).trimmingCharacters(in: .whitespacesAndNewlines))
+                dateComponents.minute = Int(line.subString(from: 3, to: 5).trimmingCharacters(in: .whitespacesAndNewlines))
+                dateComponents.second = Int(line.subString(from: 5, to: 7).trimmingCharacters(in: .whitespacesAndNewlines))
                 
-                print(flight.flightStartDate)
+                // Detect rollover
+                var frameTs = Calendar.current.date(from: dateComponents)!
+                if !frames.isEmpty && frames.last!.timestamp > frameTs {
+                    frameTs.addTimeInterval(86400)
+                }
                 
                 let latDegrees        = abs(Double(line.subString(from: 7, to: 9))!)
                 let latMinutes        = abs(Double(line.subString(from: 9, to: 11))! / 60)
                 let latSeconds        = abs(Double(line.subString(from: 11, to: 14))! / 3600)
-                let latDirection      = line.subString(from: 14, to: 14)
+                let latDirection      = line.subString(from: 14, to: 15)
                 var latitude          = latDegrees + latMinutes + latSeconds
                 if latDirection == "S" {
                     latitude *= -1
@@ -145,7 +149,7 @@ class FlightRecorder: FlightRecorderService {
                 let longDegrees       = abs(Double(line.subString(from: 15, to: 18))!)
                 let longMinutes       = abs(Double(line.subString(from: 18, to: 20))! / 60)
                 let longSeconds       = abs(Double(line.subString(from: 20, to: 23))! / 3600)
-                let longDirection     = line.subString(from: 23, to: 23)
+                let longDirection     = line.subString(from: 23, to: 24)
                 var longitude         = longDegrees + longMinutes + longSeconds
                 if longDirection == "W" {
                     longitude *= -1
@@ -166,15 +170,36 @@ class FlightRecorder: FlightRecorderService {
                     baroAltitude: baroAlt,
                     verticalVelocity: 0
                 )
-                frame.timestamp = Calendar.current.date(from: dateComponents)!
-                
+                frame.timestamp = frameTs
                 frames.append(frame)
             }
         }
         
-        flight.flightFrames = frames
-        print("Max ts: \(flight.flightFrames.map { $0.timestamp }.max())")
-        flight.flightEndDate = flight.flightFrames.map { $0.timestamp }.max()!
+        guard let first = frames.min(by: { $0.timestamp < $1.timestamp }),
+              let last = frames.max(by: { $0.timestamp < $1.timestamp }) else {
+            throw DataError.invalidData("Invalid flight dates found inf ile")
+        }
+        
+        // Duration
+        flight.flightStartDate = first.timestamp
+        flight.flightEndDate = last.timestamp
+        
+        let duration = flight.flightStartDate.distance(to: flight.flightEndDate)
+        let hour = String(format: "%02d", duration.hour)
+        let minute = String(format: "%02d", duration.minute)
+        let second = String(format: "%02d", duration.second)
+        flight.flightDuration = "\(hour):\(minute):\(second)"
+        
+        // Launch / Land
+        flight.launchLatitude = first.latitude
+        flight.launchLongitude = first.longitude
+        flight.landLatitude = last.latitude
+        flight.landLongitude = last.longitude
+        
+        frames.forEach { frame in
+            flight.flightFrames.append(frame)
+        }
+//        flight.flightFrames = frames
         
         return flight
     }

@@ -14,7 +14,7 @@ protocol FlightRecorderService {
     func startRecording()
     func stopRecording(context: ModelContext)
     func storeFrame(frame: FlightFrame)
-    func createFlightToImport(forUrl url: URL) async throws -> Flight
+    func createFlightToImport(forUrl url: URL) async throws -> Flight?
     func exportFlight(flightToExport: Flight) async throws
 }
 
