@@ -76,7 +76,7 @@ struct MapView: View {
 }
 
 #Preview {
-    MapView()
+    MyMapView()
         .environmentObject(XcCopilotViewModel())
 }
 
