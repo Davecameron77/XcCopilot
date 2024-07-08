@@ -25,6 +25,7 @@
 		B286C7452C3B49370075F6BC /* FlightFrame+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286C7422C3B49370075F6BC /* FlightFrame+CoreDataClass.swift */; };
 		B286C7462C3B49370075F6BC /* Flight+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286C7412C3B49370075F6BC /* Flight+CoreDataProperties.swift */; };
 		B286C7472C3B49370075F6BC /* Flight+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286C7402C3B49370075F6BC /* Flight+CoreDataClass.swift */; };
+		B286C7492C3BA3970075F6BC /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286C7482C3BA3970075F6BC /* CoreDataManager.swift */; };
 		B2913E972BA1617E00E7EF81 /* PlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2913E962BA1617E00E7EF81 /* PlaybackView.swift */; };
 		B2A117DF2B1EC4B4003447E2 /* XcCopilotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A117DE2B1EC4B4003447E2 /* XcCopilotApp.swift */; };
 		B2A117E32B1EC4B5003447E2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B2A117E22B1EC4B5003447E2 /* Assets.xcassets */; };
@@ -63,6 +64,7 @@
 		B286C7412C3B49370075F6BC /* Flight+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Flight+CoreDataProperties.swift"; sourceTree = "<group>"; };
 		B286C7422C3B49370075F6BC /* FlightFrame+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FlightFrame+CoreDataClass.swift"; sourceTree = "<group>"; };
 		B286C7432C3B49370075F6BC /* FlightFrame+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FlightFrame+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		B286C7482C3BA3970075F6BC /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
 		B2913E962BA1617E00E7EF81 /* PlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackView.swift; sourceTree = "<group>"; };
 		B2A117DB2B1EC4B4003447E2 /* XcCopilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = XcCopilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B2A117DE2B1EC4B4003447E2 /* XcCopilotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XcCopilotApp.swift; sourceTree = "<group>"; };
@@ -165,6 +167,7 @@
 				B2A118052B1EC69F003447E2 /* FlightComputer.swift */,
 				B25144652B40F57C00364C7F /* FlightRecorder.swift */,
 				B2A118072B1EC6BB003447E2 /* XcCopilotViewModel.swift */,
+				B286C7482C3BA3970075F6BC /* CoreDataManager.swift */,
 			);
 			path = ViewModel;
 			sourceTree = "<group>";
@@ -315,6 +318,7 @@
 				B247F0ED2B314E120063FCA7 /* Enums.swift in Sources */,
 				B26756372C1E7CBD006C2362 /* Fragments.swift in Sources */,
 				B2F0B45B2C2CCF9300A89F4B /* XCCopilot.xcdatamodeld in Sources */,
+				B286C7492C3BA3970075F6BC /* CoreDataManager.swift in Sources */,
 				B2A117F72B1EC5D9003447E2 /* MapView.swift in Sources */,
 				B286C7442C3B49370075F6BC /* FlightFrame+CoreDataProperties.swift in Sources */,
 				B286C7452C3B49370075F6BC /* FlightFrame+CoreDataClass.swift in Sources */,

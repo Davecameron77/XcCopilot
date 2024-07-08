@@ -15,17 +15,18 @@ import WeatherKit
 actor FlightRecorder {
     
     var flight: Flight?
-    let container = NSPersistentContainer(name: "XCCopilot")
-    let context: NSManagedObjectContext
-    
-    init() {
-        container.loadPersistentStores { storeDescription, error in
-            guard error == nil else {
-                fatalError("Unresolved error \(error!.localizedDescription)")
-            }
-        }
-        context = container.viewContext
-    }
+    let context = CoreDataManager.shared.context
+//    let container = NSPersistentContainer(name: "XCCopilot")
+//    let context: NSManagedObjectContext
+//    
+//    init() {
+//        container.loadPersistentStores { storeDescription, error in
+//            guard error == nil else {
+//                fatalError("Unresolved error \(error!.localizedDescription)")
+//            }
+//        }
+//        context = container.viewContext
+//    }
 
     ///
     /// Enables takeoff detection and passes a reference of the flight to record
@@ -412,7 +413,7 @@ actor FlightRecorder {
             #endif
         } catch {
             print("Import Error: \(error)")
-            throw error
+//            throw error
         }
     }
     
