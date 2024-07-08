@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    @StateObject var vm: XcCopilotViewModel = .init()
+    @StateObject private var vm = XcCopilotViewModel()
     
     var body: some View {
         TabView {

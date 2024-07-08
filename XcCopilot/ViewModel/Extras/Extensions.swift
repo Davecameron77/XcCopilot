@@ -7,6 +7,7 @@
 
 import SwiftUI
 import MapKit
+import SwiftData
 
 extension CLLocationCoordinate2D {
     static var myLocation: CLLocationCoordinate2D {
@@ -47,13 +48,43 @@ extension Array where Element: BinaryFloatingPoint {
         }
     }
 
+    func simpleMovingAverage() -> Double where Element == Double {
+        guard self.count >= 1 else { return 0.0 }
+        
+        let size = self.count
+        var sum = 0.0
+        
+        for i in 0..<self.count-1 {
+            sum += self[i+1] - self[i]
+        }
+        
+        return sum / Double(size)
+    }
+    
+    func effectiveMovingAverage() -> Double where Element == Double {
+        guard self.count >= 3 else { return 0.0 }
+        
+        let size = self.count - 1
+        var sum = 0.0
+        let ascending = self.last ?? 0.0 > 0.0
+        
+        for index in stride(from: size, through: 1, by: -1) {
+            if ascending && self[index] < 0.0 { break }
+            if !ascending && self[index] > 0.0 { break }
+            
+            sum += self[index-1] + self[index]
+        }
+        
+        return sum / Double(size)
+    }
 }
 
 extension String {
     func subString(from: Int, to: Int) -> String {
        let startIndex = self.index(self.startIndex, offsetBy: from)
        let endIndex = self.index(self.startIndex, offsetBy: to)
-       return String(self[startIndex..<endIndex])
+       
+        return String(self[startIndex..<endIndex])
     }
     
     mutating func addNewLine() {
@@ -66,6 +97,8 @@ extension Double {
         let divisor = pow(10.0, Double(places))
         return (self * divisor).rounded() / divisor
     }
+    
+    var degreesToRadians: Double { self * .pi / 180 }
 }
 
 extension CLLocationCoordinate2D {
@@ -87,8 +120,8 @@ extension CLLocationCoordinate2D {
 }
 
 extension TimeInterval {
-    var hourMinuteSecondMS: String {
-        String(format:"%d:%02d:%02d.%03d", hour, minute, second, millisecond)
+    var hourMinuteSecond: String {
+        String(format:"%d:%02d:%02d", hour, minute, second, millisecond)
     }
     var minuteSecondMS: String {
         String(format:"%d:%02d.%03d", minute, second, millisecond)
@@ -109,4 +142,28 @@ extension TimeInterval {
 
 enum DataError: Error {
     case invalidData(String)
+}
+
+extension MKCoordinateSpan {
+    static let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.03, longitudeDelta: 0.03)
+}
+
+struct HashableNode: Hashable, Identifiable {
+    var id = UUID().uuidString
+    let timestamp: Date
+    var interval: Duration?
+    let latitude: Double
+    let longitude: Double
+    let altitude: Double
+    let verticalSpeed: Double
+}
+
+extension Date {
+    func get(_ components: Calendar.Component..., calendar: Calendar = Calendar.current) -> DateComponents {
+        return calendar.dateComponents(Set(components), from: self)
+    }
+
+    func get(_ component: Calendar.Component, calendar: Calendar = Calendar.current) -> Int {
+        return calendar.component(component, from: self)
+    }
 }

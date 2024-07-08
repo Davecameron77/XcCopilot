@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23173.10" systemVersion="24A5279h" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+    <entity name="Flight" representedClassName="Flight" syncable="YES">
+        <attribute name="cloudCover" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="dewpoint" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="dewpointUnit" optional="YES" attributeType="String"/>
+        <attribute name="finNumber" optional="YES" attributeType="String"/>
+        <attribute name="flightCopilot" optional="YES" attributeType="String"/>
+        <attribute name="flightDuration" optional="YES" attributeType="String"/>
+        <attribute name="flightEndDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="flightFreeText" optional="YES" attributeType="String"/>
+        <attribute name="flightID" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="flightLocation" optional="YES" attributeType="String"/>
+        <attribute name="flightMaxLatitude" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="flightMaxLongitude" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="flightMinLatitude" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="flightMinLongitude" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="flightPilot" optional="YES" attributeType="String"/>
+        <attribute name="flightStartDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="flightTitle" optional="YES" attributeType="String"/>
+        <attribute name="flightType" optional="YES" attributeType="String"/>
+        <attribute name="gliderName" optional="YES" attributeType="String"/>
+        <attribute name="gliderRegistration" optional="YES" attributeType="String"/>
+        <attribute name="gliderTrimSpeed" optional="YES" attributeType="String"/>
+        <attribute name="gpsDatum" optional="YES" attributeType="String"/>
+        <attribute name="gpsModel" optional="YES" attributeType="String"/>
+        <attribute name="gpsPrecision" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="humidity" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="igcID" optional="YES" attributeType="String"/>
+        <attribute name="landLatitude" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="landLongitude" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="launchLatitude" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="launchLongitude" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="pressure" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="pressureSensor" optional="YES" attributeType="String"/>
+        <attribute name="pressureUnit" optional="YES" attributeType="String"/>
+        <attribute name="temperature" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="temperatureUnit" optional="YES" attributeType="String"/>
+        <attribute name="varioFirmwareVer" optional="YES" attributeType="String"/>
+        <attribute name="varioHardwareVer" optional="YES" attributeType="String"/>
+        <attribute name="windDirection" optional="YES" attributeType="String"/>
+        <attribute name="windGust" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="windSpeed" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="windUnit" optional="YES" attributeType="String"/>
+        <relationship name="frames" optional="YES" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="FlightFrame" inverseName="flight" inverseEntity="FlightFrame"/>
+    </entity>
+    <entity name="FlightFrame" representedClassName="FlightFrame" syncable="YES">
+        <attribute name="accelerationX" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="accelerationY" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="accelerationZ" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="currentBaroAltitude" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="currentGPSAltitude" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="currentGPSCourse" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="currentVerticalVelocity" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="flightID" optional="YES" attributeType="String"/>
+        <attribute name="gravityX" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="gravityY" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="gravityZ" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="latitude" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="longitude" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="timestamp" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="flight" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="Flight" inverseName="frames" inverseEntity="Flight"/>
+    </entity>
+</model>
