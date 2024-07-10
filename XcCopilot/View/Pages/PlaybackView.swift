@@ -167,7 +167,7 @@ struct PlaybackView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             Task.detached(priority: .userInitiated) {
-                await setup()
+                setup()
             }
         }
         .onReceive(timer) { input in

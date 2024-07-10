@@ -5,16 +5,14 @@
 //  Created by Dave Cameron on 2023-12-04.
 //
 
-import Foundation
-import CoreData
 import CoreLocation
 import CoreMotion
 import MapKit
-import SwiftUI
 import os
-import WeatherKit
-import UniformTypeIdentifiers
 import SwiftData
+import SwiftUI
+import UniformTypeIdentifiers
+import WeatherKit
 
 class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     var logger: Logger? = .init(
@@ -147,11 +145,13 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     init() {
         mapPosition = MapCameraPosition.userLocation(followsHeading: true, fallback: cameraBackup)
-        
         flightComputer = FlightComputer()
-        flightRecorder = FlightRecorder()
+        do {
+            try flightRecorder = FlightRecorder()
+        } catch {
+            fatalError("Error setting up Flight Recorder")
+        }
         
-        flightComputer.delegate = self
         
         // Run loop for the ViewModel, polling the flight computer and updating display vars
         updateTimer = Timer.scheduledTimer(withTimeInterval: REFRESH_FREQUENCY,
@@ -167,9 +167,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     func armForFlight() {
         flightState = .armed
-        Task {
-            await flightRecorder.armForFlight()
-        }
+        flightRecorder.armForFlight()
     }
     
     ///
@@ -329,7 +327,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     /// - Parameter forUrl: The file to import
     func importIgcFile(forUrl url: URL) async -> Bool {
-        await Task {
+        let task = Task {
             do {
                 try await flightRecorder.importFlight(forUrl: url)
                 return true
@@ -338,7 +336,10 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
                 showAlert(withText: "Error importing IGC file: \(error.localizedDescription)")
             }
             return false
-        }.result.get()
+        }
+
+        let result = try? await task.result.get()
+        return result ?? false
     }
     
     ///
@@ -364,12 +365,11 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
                 return try await flightRecorder.getFlights()
             } catch {
                 logger?.debug("\(error)")
-                showAlert(withText: "Failed to load flights")
+                showAlert(withText: "Error fetching flights")
             }
             return [Flight]()
         }
-        
-        return await task.result.get()
+        return try! await task.result.get()
     }
     
     ///
@@ -395,10 +395,10 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     func deleteFlight(_ flight: Flight) {
         Task {
             do {
-                try await flightRecorder.deleteFlight(flight)
+                try flightRecorder = FlightRecorder()
             } catch {
                 logger?.debug("\(error)")
-                showAlert(withText: "Failed to delete flight: \(flight.flightTitle ?? "Unknown")")
+                showAlert(withText: "Error deleting flight")
             }
         }
     }

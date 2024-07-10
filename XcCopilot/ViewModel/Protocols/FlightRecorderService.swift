@@ -12,7 +12,6 @@ import UniformTypeIdentifiers
 import WeatherKit
 
 protocol FlightRecorderService {
-    var delegate: ViewModelDelegate? { get set }
     
     func armForFlight()
     func storeFrame(
@@ -25,11 +24,9 @@ protocol FlightRecorderService {
         verticalVelocity: Double
     ) throws
     func endFlight(withWeather weather: Weather?) throws
-    func getFlights() throws -> [Flight]
-    func getFrames(forFlight flight: Flight) throws -> [FlightFrame]
-    func updateFlightTitle(forFlight flight: Flight, withTitle title: String) throws
+    func getFlights() async throws -> [Flight]
     func deleteFlight(_ flight: Flight) throws
-    func importFlight(forUrl url: URL) async throws -> Bool
+    func importFlight(forUrl url: URL) async throws
     func exportFlight(flightToExport: Flight) async throws -> IgcFile
 }
 

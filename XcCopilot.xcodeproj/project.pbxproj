@@ -21,11 +21,8 @@
 		B27A78642C1FD74D001CE7E1 /* 6hz_descend.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B27A78602C1FD74D001CE7E1 /* 6hz_descend.mp3 */; };
 		B27A78652C1FD74D001CE7E1 /* 4hz_descend.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B27A785E2C1FD74D001CE7E1 /* 4hz_descend.mp3 */; };
 		B27A78662C1FD74D001CE7E1 /* 2hz_ascend.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B27A785B2C1FD74D001CE7E1 /* 2hz_ascend.mp3 */; };
-		B286C7442C3B49370075F6BC /* FlightFrame+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286C7432C3B49370075F6BC /* FlightFrame+CoreDataProperties.swift */; };
-		B286C7452C3B49370075F6BC /* FlightFrame+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286C7422C3B49370075F6BC /* FlightFrame+CoreDataClass.swift */; };
-		B286C7462C3B49370075F6BC /* Flight+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286C7412C3B49370075F6BC /* Flight+CoreDataProperties.swift */; };
-		B286C7472C3B49370075F6BC /* Flight+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286C7402C3B49370075F6BC /* Flight+CoreDataClass.swift */; };
-		B286C7492C3BA3970075F6BC /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286C7482C3BA3970075F6BC /* CoreDataManager.swift */; };
+		B289DFBC2C3CBAF800C6260A /* Flight.swift in Sources */ = {isa = PBXBuildFile; fileRef = B289DFBB2C3CBAF800C6260A /* Flight.swift */; };
+		B289DFBE2C3CC05200C6260A /* FlightFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = B289DFBD2C3CC05200C6260A /* FlightFrame.swift */; };
 		B2913E972BA1617E00E7EF81 /* PlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2913E962BA1617E00E7EF81 /* PlaybackView.swift */; };
 		B2A117DF2B1EC4B4003447E2 /* XcCopilotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A117DE2B1EC4B4003447E2 /* XcCopilotApp.swift */; };
 		B2A117E32B1EC4B5003447E2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B2A117E22B1EC4B5003447E2 /* Assets.xcassets */; };
@@ -41,7 +38,6 @@
 		B2A118062B1EC69F003447E2 /* FlightComputer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A118052B1EC69F003447E2 /* FlightComputer.swift */; };
 		B2A118082B1EC6BB003447E2 /* XcCopilotViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A118072B1EC6BB003447E2 /* XcCopilotViewModel.swift */; };
 		B2E1800A2B94530B00C3C9CA /* ViewModelDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E180092B94530B00C3C9CA /* ViewModelDelegate.swift */; };
-		B2F0B45B2C2CCF9300A89F4B /* XCCopilot.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = B2F0B4592C2CCF9300A89F4B /* XCCopilot.xcdatamodeld */; };
 		B2F1FCD62B4FA28700396D91 /* Vector3.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2F1FCD52B4FA28700396D91 /* Vector3.swift */; };
 /* End PBXBuildFile section */
 
@@ -60,11 +56,8 @@
 		B27A785E2C1FD74D001CE7E1 /* 4hz_descend.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = 4hz_descend.mp3; sourceTree = "<group>"; };
 		B27A785F2C1FD74D001CE7E1 /* 6hz_ascend.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = 6hz_ascend.mp3; sourceTree = "<group>"; };
 		B27A78602C1FD74D001CE7E1 /* 6hz_descend.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = 6hz_descend.mp3; sourceTree = "<group>"; };
-		B286C7402C3B49370075F6BC /* Flight+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Flight+CoreDataClass.swift"; sourceTree = "<group>"; };
-		B286C7412C3B49370075F6BC /* Flight+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Flight+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		B286C7422C3B49370075F6BC /* FlightFrame+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FlightFrame+CoreDataClass.swift"; sourceTree = "<group>"; };
-		B286C7432C3B49370075F6BC /* FlightFrame+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FlightFrame+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		B286C7482C3BA3970075F6BC /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
+		B289DFBB2C3CBAF800C6260A /* Flight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Flight.swift; sourceTree = "<group>"; };
+		B289DFBD2C3CC05200C6260A /* FlightFrame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightFrame.swift; sourceTree = "<group>"; };
 		B2913E962BA1617E00E7EF81 /* PlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackView.swift; sourceTree = "<group>"; };
 		B2A117DB2B1EC4B4003447E2 /* XcCopilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = XcCopilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B2A117DE2B1EC4B4003447E2 /* XcCopilotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XcCopilotApp.swift; sourceTree = "<group>"; };
@@ -82,7 +75,6 @@
 		B2A118072B1EC6BB003447E2 /* XcCopilotViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XcCopilotViewModel.swift; sourceTree = "<group>"; };
 		B2B87CBF2B2FB18C004456C3 /* XcCopilot.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = XcCopilot.entitlements; sourceTree = "<group>"; };
 		B2E180092B94530B00C3C9CA /* ViewModelDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelDelegate.swift; sourceTree = "<group>"; };
-		B2F0B45A2C2CCF9300A89F4B /* XCCopilot.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = XCCopilot.xcdatamodel; sourceTree = "<group>"; };
 		B2F1FCD52B4FA28700396D91 /* Vector3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vector3.swift; sourceTree = "<group>"; };
 		B2F83CF72B50E70A00E6A5D2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -150,11 +142,8 @@
 		B2A117EC2B1EC4BC003447E2 /* Model */ = {
 			isa = PBXGroup;
 			children = (
-				B2F0B4592C2CCF9300A89F4B /* XCCopilot.xcdatamodeld */,
-				B286C7402C3B49370075F6BC /* Flight+CoreDataClass.swift */,
-				B286C7412C3B49370075F6BC /* Flight+CoreDataProperties.swift */,
-				B286C7422C3B49370075F6BC /* FlightFrame+CoreDataClass.swift */,
-				B286C7432C3B49370075F6BC /* FlightFrame+CoreDataProperties.swift */,
+				B289DFBB2C3CBAF800C6260A /* Flight.swift */,
+				B289DFBD2C3CC05200C6260A /* FlightFrame.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -167,7 +156,6 @@
 				B2A118052B1EC69F003447E2 /* FlightComputer.swift */,
 				B25144652B40F57C00364C7F /* FlightRecorder.swift */,
 				B2A118072B1EC6BB003447E2 /* XcCopilotViewModel.swift */,
-				B286C7482C3BA3970075F6BC /* CoreDataManager.swift */,
 			);
 			path = ViewModel;
 			sourceTree = "<group>";
@@ -313,18 +301,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				B2A117F92B1EC600003447E2 /* InstrumentView.swift in Sources */,
+				B289DFBE2C3CC05200C6260A /* FlightFrame.swift in Sources */,
 				B2A118022B1EC66A003447E2 /* FlightComputerService.swift in Sources */,
 				B2A117F02B1EC4D4003447E2 /* HomeView.swift in Sources */,
 				B247F0ED2B314E120063FCA7 /* Enums.swift in Sources */,
 				B26756372C1E7CBD006C2362 /* Fragments.swift in Sources */,
-				B2F0B45B2C2CCF9300A89F4B /* XCCopilot.xcdatamodeld in Sources */,
-				B286C7492C3BA3970075F6BC /* CoreDataManager.swift in Sources */,
 				B2A117F72B1EC5D9003447E2 /* MapView.swift in Sources */,
-				B286C7442C3B49370075F6BC /* FlightFrame+CoreDataProperties.swift in Sources */,
-				B286C7452C3B49370075F6BC /* FlightFrame+CoreDataClass.swift in Sources */,
-				B286C7462C3B49370075F6BC /* Flight+CoreDataProperties.swift in Sources */,
-				B286C7472C3B49370075F6BC /* Flight+CoreDataClass.swift in Sources */,
 				B2A117FD2B1EC624003447E2 /* SettingsView.swift in Sources */,
+				B289DFBC2C3CBAF800C6260A /* Flight.swift in Sources */,
 				B247F0E92B312D320063FCA7 /* FlightView.swift in Sources */,
 				B25441202B58DE4B00C476EF /* SoundManager.swift in Sources */,
 				B2E1800A2B94530B00C3C9CA /* ViewModelDelegate.swift in Sources */,
@@ -572,19 +556,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCVersionGroup section */
-		B2F0B4592C2CCF9300A89F4B /* XCCopilot.xcdatamodeld */ = {
-			isa = XCVersionGroup;
-			children = (
-				B2F0B45A2C2CCF9300A89F4B /* XCCopilot.xcdatamodel */,
-			);
-			currentVersion = B2F0B45A2C2CCF9300A89F4B /* XCCopilot.xcdatamodel */;
-			path = XCCopilot.xcdatamodeld;
-			sourceTree = "<group>";
-			versionGroupType = wrapper.xcdatamodel;
-		};
-/* End XCVersionGroup section */
 	};
 	rootObject = B2A117D32B1EC4B4003447E2 /* Project object */;
 }

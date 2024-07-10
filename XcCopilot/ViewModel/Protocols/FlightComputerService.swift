@@ -9,7 +9,6 @@ import Foundation
 import CoreMotion
 
 protocol FlightComputerService {
-    var delegate: ViewModelDelegate? { get set }
     
     var inFlight: Bool { get set }
     var readyToFly: Bool { get }

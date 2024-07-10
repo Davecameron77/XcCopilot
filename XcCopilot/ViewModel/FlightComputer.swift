@@ -16,8 +16,8 @@ import SwiftUI
 ///
 class FlightComputer: NSObject,
                       CLLocationManagerDelegate,
-                      FlightComputerService {
-
+                      FlightComputerService {   
+    
     ///
     /// Init a FlightComputer and try to start all available services
     ///
@@ -29,18 +29,15 @@ class FlightComputer: NSObject,
         startCoreMotionUpdates()
     }
     
-    //MARK: -- Vars
-    
-    var delegate: ViewModelDelegate?
-
     // State
     var inFlight: Bool = false
     var readyToFly: Bool {
-    #if DEBUG
+        // Simulator does not support instruments
+#if DEBUG
         return true
-    #else
+#else
         altAvailable && gpsAvailable && motionAvailable
-    #endif
+#endif
     }
     var launchTimeStamp: Date?
     var flightTime: TimeInterval {
@@ -112,8 +109,6 @@ class FlightComputer: NSObject,
     private let refreshQueue = OperationQueue()
     private let kalmanFilter = KalmanFilter()
     
-    //MARK: -- Methods
-    
     ///
     /// Just triggers an inFlight bool to be aware of state. Takeoff detection only functions when !inFlight
     ///
@@ -138,10 +133,6 @@ class FlightComputer: NSObject,
         
         inFlight = true
         launchTimeStamp = Date.now
-        
-        if delegate != nil {
-            delegate?.logger?.debug("\(Date.now): Started a flight")
-        }
     }
     
     ///
@@ -150,10 +141,6 @@ class FlightComputer: NSObject,
     func stopFlying() {
         inFlight = false
         launchTimeStamp = nil
-        
-        if delegate != nil {
-            delegate?.logger?.debug("\(Date.now): Ended a flight")
-        }
     }
     
     ///
@@ -174,7 +161,7 @@ class FlightComputer: NSObject,
         // Remove trivial values and append resultant value
         // Vertical velocity is average of past measurements
         #warning("Remove this")
-//        verticalVelocityMetresPerSecond = abs(simpleAverage) > 0.1 ? simpleAverage : 0.0
+        //        verticalVelocityMetresPerSecond = abs(simpleAverage) > 0.1 ? simpleAverage : 0.0
         verticalVelocityHistory.append(simpleAverage)
         verticalVelocityMetresPerSecond = verticalVelocityHistory.effectiveMovingAverage()
         
@@ -191,7 +178,7 @@ class FlightComputer: NSObject,
         // CoreMotion collects at 100 hz, with an average trim speed of 30 km/h
         // or 8.3 m/s, yields an average sample of 12.5m travelled at MAX_ACCEL_HISTORY = 100
         verticalAccelerationMetresPerSecondSquared = (zAccelerationHistory.average * 9.81)
-                
+        
         if verticalVelocityMetresPerSecond > 0.5 {
             nearestThermal = currentCoords
         }
@@ -200,7 +187,7 @@ class FlightComputer: NSObject,
     ///
     /// Calculates the current elevation based on lat/long and altitude
     ///
-    private func calculateElevation() async {
+    private func calculateElevation() async throws {
         if currentCoords.latitude == 0  || currentCoords.longitude == 0 {
             return
         }
@@ -219,30 +206,22 @@ class FlightComputer: NSObject,
         let endpoint = "/api/v1/lookup?locations=\(currentCoords.latitude),\(currentCoords.longitude)"
         guard let url = URL(string: api + endpoint) else { return }
         
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            
-            if let decodedResponse = try? JSONDecoder().decode(Response.self, from: data) {
-                if let terrainElevation = decodedResponse.results.first?.elevation {
-                    // Set elevation over ground based on baro reading
-                    calculatedElevation = Double.maximum(baroAltitude - terrainElevation, 0)
-                }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        
+        if let decodedResponse = try? JSONDecoder().decode(Response.self, from: data) {
+            if let terrainElevation = decodedResponse.results.first?.elevation {
+                // Set elevation over ground based on baro reading
+                calculatedElevation = Double.maximum(baroAltitude - terrainElevation, 0)
             }
-            
-            // Detect a landing, no velocity and no elevation
-            if terrainElevation < 3 && self.gpsSpeed < 1 {
-            #if DEBUG
-                // Don't check for landing when in debug
-            #else
-                stopFlying()
-            #endif
-            }
-            
-        } catch {
-            if delegate != nil && delegate?.logger != nil {
-                delegate!.logger!.error("CoreMotion: Error retrieiving location")
-                delegate!.logger!.error("Error: \(error.localizedDescription)")
-            }
+        }
+        
+        // Detect a landing, no velocity and no elevation
+        if terrainElevation < 3 && self.gpsSpeed < 1 {
+#if DEBUG
+            // Don't check for landing when in debug
+#else
+            stopFlying()
+#endif
         }
     }
 }
@@ -309,10 +288,6 @@ extension FlightComputer {
     /// Handles a failure in location authorication
     ///
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        if delegate != nil && delegate?.logger != nil {
-            delegate?.logger!.error("\(Date.now): CoreLocation Error: \(error.localizedDescription)")
-        }
-        
         manager.requestAlwaysAuthorization()
     }
 
@@ -335,20 +310,10 @@ extension FlightComputer {
             manager.startUpdatingLocation()
             manager.startUpdatingHeading()
         @unknown default:
-            if delegate != nil && delegate?.logger != nil {
-                delegate?.logger!.error("CoreLocation Error: Unknown location permissions error")
-                delegate?.showAlert(withText: "Location permissions error")
-            }
+            return
         }
     }
     
-    ///
-    /// Checks for GPS availability
-    ///
-    private func checkGpsAvailable() -> Bool {
-        return manager.authorizationStatus == .authorizedAlways ||
-               manager.authorizationStatus == .authorizedWhenInUse
-    }
 }
 
 ///
@@ -449,7 +414,7 @@ extension FlightComputer {
                     
                     // Update elevation if last update is long enough ago
                     if Date.now - self.lastElevationUpdate > TimeInterval(self.SECONDS_BETWEEN_ELEVATION_UPDATES) {
-                        Task { await self.calculateElevation() }
+                        Task { try await self.calculateElevation() }
                     }
                     
                 }
@@ -457,20 +422,6 @@ extension FlightComputer {
                 self.altAvailable = false
             }
         }
-    }
-    
-    ///
-    /// Checks altimter availability
-    ///
-    private func checkAltimeterAvailable() -> Bool {
-        return altAvailable
-    }
-    
-    ///
-    /// Checks CoreMotion availability
-    ///
-    private func checkMotionAvailable() -> Bool {
-        return motionManager.isDeviceMotionAvailable
     }
 }
 

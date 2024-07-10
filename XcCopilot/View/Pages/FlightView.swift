@@ -48,7 +48,7 @@ struct FlightView: View {
                     .font(.title)
                 Text("Flight Start: \(flight.flightStartDate!, format: .dateTime)")
                 Text("Flight End: \(flight.flightEndDate!, format: .dateTime)")
-                Text("Flight Duration: \(flight.flightDuration!)")
+                Text("Flight Duration: \(flight.flightDuration)")
                 Text("Launch Altitude: \(launchAlt.formatted(.number.precision(.fractionLength(1))))")
                 Text("Max Altitude: \(maxAlt.formatted(.number.precision(.fractionLength(1))))")
                 Text("Land Altitude: \(landAlt.formatted(.number.precision(.fractionLength(1))))")
@@ -71,11 +71,11 @@ struct FlightView: View {
             }
         }
         .onAppear {
-            frames = flight.frames?.array as! [FlightFrame]
-            flightName = flight.flightTitle ?? ""
+            frames = flight.frames
+            flightName = flight.flightTitle
             
             launchAlt = frames.min(by: {
-                a, b in a.timestamp! < b.timestamp!
+                a, b in a.timestamp < b.timestamp
             })?.currentBaroAltitude ?? 0.0
             
             maxAlt = frames.max(by: {
@@ -83,11 +83,11 @@ struct FlightView: View {
             })?.currentBaroAltitude ?? 0.0
             
             landAlt = frames.max(by: {
-                a, b in a.timestamp! < b.timestamp!
+                a, b in a.timestamp < b.timestamp
             })?.currentBaroAltitude ?? 0.0
             
             path = frames.map {
-                HashableNode(timestamp: $0.timestamp!,
+                HashableNode(timestamp: $0.timestamp,
                              latitude: $0.latitude,
                              longitude: $0.longitude,
                              altitude: $0.currentBaroAltitude,
@@ -108,7 +108,7 @@ struct FlightView: View {
                                    span: MKCoordinateSpan(latitudeDelta: abs(maxLatitude - minLatitude) + 0.005,
                                                           longitudeDelta: abs(maxLongitude - minLongitude + 0.005))))
         }
-        .navigationTitle(flight.flightTitle ?? "Unknown Flight")
+        .navigationTitle(flight.flightTitle)
         .navigationDestination(for: [HashableNode].self) { path in
             PlaybackView(nodes: path)
         }
@@ -128,7 +128,7 @@ struct FlightView: View {
         .fileExporter(isPresented: $exportPanelOpen,
                       document: exportedFile,
                       contentType: UTType.igcType,
-                      defaultFilename: "\(flight.flightTitle!)") { result in
+                      defaultFilename: "\(flight.flightTitle)") { result in
         }
     }
 }

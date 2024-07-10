@@ -143,12 +143,12 @@ struct FlightCard: View {
     
     var body: some View {
         VStack(alignment: .leading) {
-            Text(flight.flightTitle ?? "Unknown Flight")
+            Text(flight.flightTitle)
                 .font(.title3)
             HStack {
                 Text(flight.flightStartDate ?? Date.now, style: .date)
                 Spacer()
-                Text(flight.flightDuration ?? "00:00:00")
+                Text(flight.flightDuration)
             }
             .font(.subheadline)
         }
