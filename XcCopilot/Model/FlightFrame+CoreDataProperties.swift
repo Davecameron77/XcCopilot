@@ -2,7 +2,7 @@
 //  FlightFrame+CoreDataProperties.swift
 //  XcCopilot
 //
-//  Created by Dave Cameron on 2024-07-07.
+//  Created by Dave Cameron on 2024-07-09.
 //
 //
 

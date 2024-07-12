@@ -2,7 +2,7 @@
 //  Flight+CoreDataProperties.swift
 //  XcCopilot
 //
-//  Created by Dave Cameron on 2024-07-07.
+//  Created by Dave Cameron on 2024-07-09.
 //
 //
 
@@ -57,30 +57,12 @@ extension Flight {
     @NSManaged public var windGust: Double
     @NSManaged public var windSpeed: Double
     @NSManaged public var windUnit: String?
-    @NSManaged public var frames: NSOrderedSet?
+    @NSManaged public var frames: NSSet?
 
 }
 
 // MARK: Generated accessors for frames
 extension Flight {
-
-    @objc(insertObject:inFramesAtIndex:)
-    @NSManaged public func insertIntoFrames(_ value: FlightFrame, at idx: Int)
-
-    @objc(removeObjectFromFramesAtIndex:)
-    @NSManaged public func removeFromFrames(at idx: Int)
-
-    @objc(insertFrames:atIndexes:)
-    @NSManaged public func insertIntoFrames(_ values: [FlightFrame], at indexes: NSIndexSet)
-
-    @objc(removeFramesAtIndexes:)
-    @NSManaged public func removeFromFrames(at indexes: NSIndexSet)
-
-    @objc(replaceObjectInFramesAtIndex:withObject:)
-    @NSManaged public func replaceFrames(at idx: Int, with value: FlightFrame)
-
-    @objc(replaceFramesAtIndexes:withFrames:)
-    @NSManaged public func replaceFrames(at indexes: NSIndexSet, with values: [FlightFrame])
 
     @objc(addFramesObject:)
     @NSManaged public func addToFrames(_ value: FlightFrame)
@@ -89,10 +71,10 @@ extension Flight {
     @NSManaged public func removeFromFrames(_ value: FlightFrame)
 
     @objc(addFrames:)
-    @NSManaged public func addToFrames(_ values: NSOrderedSet)
+    @NSManaged public func addToFrames(_ values: NSSet)
 
     @objc(removeFrames:)
-    @NSManaged public func removeFromFrames(_ values: NSOrderedSet)
+    @NSManaged public func removeFromFrames(_ values: NSSet)
 
 }
 
