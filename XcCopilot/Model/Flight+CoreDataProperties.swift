@@ -2,7 +2,7 @@
 //  Flight+CoreDataProperties.swift
 //  XcCopilot
 //
-//  Created by Dave Cameron on 2024-07-09.
+//  Created by Dave Cameron on 2024-07-11.
 //
 //
 
@@ -24,7 +24,6 @@ extension Flight {
     @NSManaged public var flightDuration: String?
     @NSManaged public var flightEndDate: Date?
     @NSManaged public var flightFreeText: String?
-    @NSManaged public var flightID: UUID?
     @NSManaged public var flightLocation: String?
     @NSManaged public var flightMaxLatitude: Double
     @NSManaged public var flightMaxLongitude: Double
@@ -41,6 +40,7 @@ extension Flight {
     @NSManaged public var gpsModel: String?
     @NSManaged public var gpsPrecision: Double
     @NSManaged public var humidity: Double
+    @NSManaged public var id: UUID?
     @NSManaged public var igcID: String?
     @NSManaged public var landLatitude: Double
     @NSManaged public var landLongitude: Double
@@ -57,24 +57,6 @@ extension Flight {
     @NSManaged public var windGust: Double
     @NSManaged public var windSpeed: Double
     @NSManaged public var windUnit: String?
-    @NSManaged public var frames: NSSet?
-
-}
-
-// MARK: Generated accessors for frames
-extension Flight {
-
-    @objc(addFramesObject:)
-    @NSManaged public func addToFrames(_ value: FlightFrame)
-
-    @objc(removeFramesObject:)
-    @NSManaged public func removeFromFrames(_ value: FlightFrame)
-
-    @objc(addFrames:)
-    @NSManaged public func addToFrames(_ values: NSSet)
-
-    @objc(removeFrames:)
-    @NSManaged public func removeFromFrames(_ values: NSSet)
 
 }
 
