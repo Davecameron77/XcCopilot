@@ -76,6 +76,25 @@ extension LogbookView {
             } catch {
                 vm.showAlert(withText: "Error getting logged flights")
             }
+            .fileImporter(isPresented: $importerShowing, 
+                          allowedContentTypes: [UTType.igcType, UTType.text, UTType.plainText, .item]) { result in
+                switch result {
+                case .success(let url):
+                    Task(priority: .medium) {
+                        await importFlight(forUrl: url)
+                    }
+                case .failure(let error):
+                    vm.showAlert(withText: "Error importing flight: \(error)")
+                }
+            }
+        }
+    }
+}
+
+extension LogbookView {
+    func getFlights() {
+        Task {
+            self.flights = await vm.getFlights()
         }
     }
     

@@ -173,6 +173,7 @@
 				B2A118052B1EC69F003447E2 /* FlightComputer.swift */,
 				B25144652B40F57C00364C7F /* FlightRecorder.swift */,
 				B2A118072B1EC6BB003447E2 /* XcCopilotViewModel.swift */,
+				B286C7482C3BA3970075F6BC /* CoreDataManager.swift */,
 			);
 			path = ViewModel;
 			sourceTree = "<group>";
@@ -334,6 +335,10 @@
 				B26756372C1E7CBD006C2362 /* Fragments.swift in Sources */,
 				B2F0B45B2C2CCF9300A89F4B /* XCCopilot.xcdatamodeld in Sources */,
 				B2A117F72B1EC5D9003447E2 /* MapView.swift in Sources */,
+				B286C7442C3B49370075F6BC /* FlightFrame+CoreDataProperties.swift in Sources */,
+				B286C7452C3B49370075F6BC /* FlightFrame+CoreDataClass.swift in Sources */,
+				B286C7462C3B49370075F6BC /* Flight+CoreDataProperties.swift in Sources */,
+				B286C7472C3B49370075F6BC /* Flight+CoreDataClass.swift in Sources */,
 				B2A117FD2B1EC624003447E2 /* SettingsView.swift in Sources */,
 				B2D37D312C4C32F700618844 /* Flight+CoreDataClass.swift in Sources */,
 				B2D37D322C4C32F700618844 /* Flight+CoreDataProperties.swift in Sources */,
