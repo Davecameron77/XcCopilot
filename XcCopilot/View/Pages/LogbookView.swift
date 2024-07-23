@@ -10,83 +10,91 @@ import SwiftData
 import UniformTypeIdentifiers
 
 struct LogbookView: View {
-    @EnvironmentObject var vm: XcCopilotViewModel
-    @Environment(\.modelContext) var context
-    @Query(sort: \Flight.flightStartDate, order: .reverse) var flights: [Flight]
-    
-    @State private var importerShowing = false
-    
-    let igcType = UTType(exportedAs: "ca.tinyweb.xccopilot.igc")
     private let formatter = DateComponentsFormatter()
-        
+    
+    @EnvironmentObject var vm: XcCopilotViewModel
+    @State private var flights: [Flight] = []
+    @State private var importerShowing = false
+    @State private var exporterShowing = false
+    @State private var selectedUrl: URL?
+    
     var body: some View {
-        NavigationView {
-            VStack {
-                Button("Import Flight") {
-                    importerShowing = true
-                }
-                .font(.title2)
-                .buttonStyle(.borderedProminent)
-                .padding()
-                .fileImporter(
-                    isPresented: $importerShowing, allowedContentTypes: [.item]) { result in
-                        switch result {
-                        case .success(let url):
-                            importFlight(forUrl: url)
-                        case .failure(let error):
-                            print(error)
-                        }
-                    }
-                
-                List {
-                    ForEach(flights) { flight in
-                        @Bindable var flight = flight
-                        NavigationLink {
-                            FlightView(flight: flight)
-                        } label: {
-                            VStack(alignment: .leading) {
-                                Text(flight.flightTitle)
-                                    .font(.title2)
-                                HStack {
-                                    Text(flight.flightStartDate, style: .date)
-                                    Spacer()
-                                    Text(flight.flightDuration)
-                                }
+        NavigationStack {
+            Section {
+                if flights.isEmpty {
+                    ContentUnavailableView("No flights",
+                                           systemImage: "airplane.departure",
+                                           description: Text("No flights stored/imported"))
+                } else {
+                    List {
+                        ForEach(flights) { flight in
+                            NavigationLink(value: flight) {
+                                FlightCard(flight: flight)
                             }
                         }
+                        .onDelete(perform: deleteFlight)
                     }
-                    .onDelete(perform: deleteFlight)
-                    .onMove { vm.logbook.move(fromOffsets: $0, toOffset: $1) }
-                }
-                .listStyle(.inset)
-                .navigationTitle("Logbook")
-                .toolbar {
-                    EditButton()
-                }
-
-            }
-        }
-    }
-    
-    func importFlight(forUrl url: URL) {
-        Task { @MainActor in
-            if url.startAccessingSecurityScopedResource() {
-                if let flight = await vm.importIgcFile(forUrl: url) {
-                    context.insert(flight)
-                } else {
-                    vm.showAlert(withText: "Error importing flight")
                 }
             }
-        }
-    }
-    
-    func deleteFlight(_ indexSet: IndexSet) {
-        for index in indexSet {
-            let flight = flights[index]
-            context.delete(flight)
+            .navigationTitle("Logbook")
+            .navigationDestination(for: Flight.self) { flight in
+                FlightView(flight: flight)
+                    .environmentObject(vm)
+            }
+            .refreshable {
+                getFlights()
+            }
+            .onAppear {
+                getFlights()
+            }
+            .toolbar {
+                Button("Import") {
+                    importerShowing = true
+                }
+                EditButton()
+            }
+            .fileImporter(isPresented: $importerShowing,
+                          allowedContentTypes: [UTType.igcType, UTType.text, UTType.plainText, .item]) { result in
+                switch result {
+                case .success(let url):
+                    Task(priority: .medium) {
+                        await importFlight(forUrl: url)
+                    }
+                case .failure(let error):
+                    vm.showAlert(withText: "Error importing flight: \(error)")
+                }
+            }
         }
     }
 }
+
+extension LogbookView {
+    func getFlights() {
+        Task {
+            do {
+                self.flights = try await vm.getFlights()
+            } catch {
+                vm.showAlert(withText: "Error getting logged flights")
+            }
+        }
+    }
+    
+    func importFlight(forUrl url: URL) async {
+        Task(priority: .medium) {
+            if url.startAccessingSecurityScopedResource() {
+                if await vm.importIgcFile(forUrl: url) {
+                    self.flights = try await vm.getFlights()
+                }
+            }
+        }
+    }
+    
+    func deleteFlight(at offsets: IndexSet) {
+        vm.deleteFlight(flights[offsets.first!])
+        getFlights()
+    }
+}
+
 
 #Preview {
     LogbookView()

@@ -36,80 +36,102 @@ class FlightComputer: NSObject,
     // State
     var inFlight: Bool = false
     var readyToFly: Bool {
+    #if DEBUG
+        return true
+    #else
         altAvailable && gpsAvailable && motionAvailable
+    #endif
     }
     var launchTimeStamp: Date?
     var flightTime: TimeInterval {
         if inFlight && launchTimeStamp != nil {
             Date.now.timeIntervalSince(launchTimeStamp!)
         } else {
-            TimeInterval.leastNonzeroMagnitude
+            TimeInterval.zero
         }
     }
     // altAvailable means an altitude data has been received
-    private var altAvailable: Bool = false
+    var altAvailable: Bool = false
     // gpsAvailable means CoreLocation updates have been requested without error
-    private var gpsAvailable: Bool = false
+    var gpsAvailable: Bool = false
     // motionAvailable means CoreMotion updates have been received
-    private var motionAvailable: Bool = false
+    var motionAvailable: Bool = false
     
     // GPS
-    var gpsAltitude                                = 0.0
-    var gpsSpeed                                   = 0.0
-    var gpsCourse                                  = 0.0
-    var magneticHeading                            = 0.0
-    var currentCoords: CLLocationCoordinate2D      = .init(latitude: 0, longitude: 0)
+    var gpsAltitude = 0.0
+    var gpsSpeed = 0.0
+    var gpsCourse = 0.0
+    var magneticHeading = 0.0
+    var currentCoords: CLLocationCoordinate2D = .init(latitude: 0, longitude: 0)
     
     // Acceleration
-    var pitchInDegrees                             = 0.0
-    var rollInDegrees                              = 0.0
-    var yawInDegrees                               = 0.0
-    var acceleration: CMAcceleration               = .init(x: 0, y: 0, z: 0)
-    var gravity: CMAcceleration                    = .init(x: 0, y: 0, z: 0)
+    var pitchInDegrees = 0.0
+    var rollInDegrees = 0.0
+    var yawInDegrees = 0.0
+    var acceleration: CMAcceleration = .init(x: 0, y: 0, z: 0)
+    var gravity: CMAcceleration = .init(x: 0, y: 0, z: 0)
     
     // Baro/Altitude/Elevation
-    var baroAltitude                               = 0.0
-    var terrainElevation                           = 0.0
-    var calculatedElevation                        = 0.0
+    var baroAltitude = 0.0
+    var terrainElevation = 0.0
+    var calculatedElevation = 0.0
     var glideRangeInMetres: Double {
-        return calculatedElevation * 10
+        // Estimate glide ratio 10:1
+        return calculatedElevation * glideRatio
     }
-    var verticalVelocityMetresPerSecond            = 0.0
+    var glideRatio: Double {
+        if gpsSpeed < 1.5 {
+            return 0.0
+        }
+        
+        let ratio = abs((gpsSpeed / verticalVelocityMetresPerSecond).rounded(toPlaces: 1))
+        
+        return ratio > 0 ? ratio : Double.infinity
+    }
+    var verticalVelocityMetresPerSecond = 0.0
     var verticalAccelerationMetresPerSecondSquared = 0.0
     var nearestThermal: CLLocationCoordinate2D?
-    var headingToNearestThermal: Double            = .nan
-    var distanceToNearestThermal: Double           = .nan
+    var headingToNearestThermal: Double = .nan
+    var distanceToNearestThermal: Double = .nan
+    var computationCycle = 0.0
     
     // For vertical velocity and elevation calculations
-    private var baroAltitudeHistory: [Double]      = .init()
-    private var zAccelerationHistory: [Double]     = .init()
-    private let MAX_BARO_HISTORY                   = 9
-    private let MAX_ACCEL_HISTORY                  = 150
-    private var lastElevationUpdate                = Date.distantPast
-    private let SECONDS_BETWEEN_ELEVATION_UPDATES  = 10
+    private var baroAltitudeHistory: [Double] = []
+    private var zAccelerationHistory: [Double] = []
+    private var verticalVelocityHistory: [Double] = []
+    private let MAX_BARO_HISTORY  = 12
+    private let MAX_ACCEL_HISTORY  = 100
+    private var lastElevationUpdate = Date.distantPast
+    private let SECONDS_BETWEEN_ELEVATION_UPDATES = 10
     
     // Services
-    private var manager: CLLocationManager         = .init()
-    private var altimeter: CMAltimeter             = .init()
-    private var motionManager: CMMotionManager     = .init()
-    private var cmRecorder: CMSensorRecorder       = .init()
-    private var refreshQueue: OperationQueue       = .init()
+    private let manager = CLLocationManager()
+    private let altimeter = CMAltimeter()
+    private let motionManager = CMMotionManager()
+    private let cmRecorder = CMSensorRecorder()
+    private let refreshQueue = OperationQueue()
+    private let kalmanFilter = KalmanFilter()
     
     //MARK: -- Methods
     
     ///
     /// Just triggers an inFlight bool to be aware of state. Takeoff detection only functions when !inFlight
     ///
-    func startFlying() {
+    func startFlying() throws {
         // If we aren't ready for flight, alert user
         guard readyToFly else {
-            if delegate != nil && delegate?.logger != nil {
-                delegate?.showAlert(withText: "Sensor error, not ready for flight")
-                delegate?.logger?.debug("\(Date.now): Failed to start a flight")
-            }
-            
             if !gpsAvailable {
                 manager.requestAlwaysAuthorization()
+            }
+            
+            if !altAvailable {
+                throw FlightComputerError.altNotAvailable("Baro not available")
+            }
+            if !gpsAvailable {
+                throw FlightComputerError.gpsNotAvailable("GPS not available")
+            }
+            if !motionAvailable {
+                throw FlightComputerError.motionNotAvailable("Motion not available")
             }
             return
         }
@@ -140,41 +162,49 @@ class FlightComputer: NSObject,
     ///
     private func calculateVerticalVelocity() {
         
+        guard baroAltitudeHistory.count > 2 else { return }
+        
         // 1 - Calculate simple moving average of altitude history
-
-        // Sum the differences of the baro altitude history
-        var difference = 0.0
-        for index in 0 ..< baroAltitudeHistory.count - 1 {
-            difference += (baroAltitudeHistory[index+1] - baroAltitudeHistory[index])
+        
+        // Simple moving average
+        var simpleAverage = baroAltitudeHistory.simpleMovingAverage()
+        
+        #warning("Check this")
+        // 2 - Smoothing
+        
+        // Remove trivial values and append resultant value
+        // Vertical velocity is average of past measurements
+        
+        if verticalVelocityMetresPerSecond > 0 {
+            // Ascending
+            if simpleAverage < verticalVelocityMetresPerSecond {
+                simpleAverage *= 0.75
+            }
+        } else {
+            // Descending
+            if simpleAverage > verticalVelocityMetresPerSecond {
+                simpleAverage *= 0.75
+            }
+        }
+        verticalVelocityHistory.append(simpleAverage)
+        
+        verticalVelocityMetresPerSecond = verticalVelocityHistory.effectiveMovingAverage()
+        
+        // Cleanup
+        if verticalVelocityHistory.count > MAX_BARO_HISTORY {
+            let recordsToRemove = self.verticalVelocityHistory.count - self.MAX_BARO_HISTORY
+            for i in 0 ..< recordsToRemove {
+                self.verticalVelocityHistory.remove(at: i)
+            }
         }
         
-        // Net change in vertical displacement / number of samples collected
-        // Barometer samples at 6 hz, with an average trim speed of 30 km/h
-        // or 8.3 m/s, yields an average sample of 12.5m travelled at MAX_BARO_HISTORY = 9
-        // Absolute value of change must be > 0.1 m/s2
-        let simpleAverage = (difference / Double(baroAltitudeHistory.count)) * 6
-        verticalVelocityMetresPerSecond = abs(simpleAverage) > 0.1 ? simpleAverage : 0.0
-        
-        // 2 - Detect thermic activity by way of consistant acceleration
+        // 4 - Detect thermic activity by way of consistant acceleration
         
         // If net change is > 0.1g or 0.98 m/s2, interpret a detected thermal
         // CoreMotion collects at 100 hz, with an average trim speed of 30 km/h
-        // or 8.3 m/s, yields an average sample of 12.5m travelled at MAX_ACCEL_HISTORY = 150
+        // or 8.3 m/s, yields an average sample of 12.5m travelled at MAX_ACCEL_HISTORY = 100
         verticalAccelerationMetresPerSecondSquared = (zAccelerationHistory.average * 9.81)
-        
-        // 3 - Try to do a kalman filter
-
-        // 1.5s of barometric displacement and 1.5s of average vertical acceleration
-        if verticalAccelerationMetresPerSecondSquared > verticalVelocityMetresPerSecond {
-            // Altimeter lagging
-            let variance = (verticalAccelerationMetresPerSecondSquared - verticalVelocityMetresPerSecond) * 0.5
-            verticalVelocityMetresPerSecond = verticalVelocityMetresPerSecond + variance
-        } else {
-            // Altimeter leading
-            let variance = (verticalVelocityMetresPerSecond - verticalAccelerationMetresPerSecondSquared) * 0.5
-            verticalVelocityMetresPerSecond = verticalVelocityMetresPerSecond - variance
-        }
-        
+                
         if verticalVelocityMetresPerSecond > 0.5 {
             nearestThermal = currentCoords
         }
@@ -238,7 +268,9 @@ extension FlightComputer {
     /// Starts CoreLocation Services
     ///
     private func startCoreLocationUpdates() {
-        if manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways {
+        if manager.authorizationStatus == .authorizedWhenInUse ||
+           manager.authorizationStatus == .authorizedAlways {
+            
             manager.desiredAccuracy = kCLLocationAccuracyBest
             manager.startUpdatingLocation()
 
@@ -252,13 +284,6 @@ extension FlightComputer {
     /// Handles a received location update
     ///
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        processLocationUpdate(locations: locations)
-    }
-    
-    ///
-    /// Processes a received location update
-    ///
-    func processLocationUpdate(locations: [CLLocation]) {
         if !locations.isEmpty {
             // Update telemetry
             currentCoords = locations.first!.coordinate
@@ -282,11 +307,6 @@ extension FlightComputer {
                 let thermalLocation = CLLocation(latitude: latY, longitude: longY)
                 
                 distanceToNearestThermal = thermalLocation.distance(from: currentLocation)
-            }
-            
-            // Detect a launch
-            if !inFlight && gpsSpeed > 5.5 {
-                startFlying()
             }
         }
     }
@@ -357,7 +377,8 @@ extension FlightComputer {
             error in
             if data != nil {
                 self.motionAvailable = true
-                DispatchQueue.main.async {
+                
+                DispatchQueue.global(qos: .userInitiated).async {
                     // Convert from radians to degrees
                     self.pitchInDegrees = data!.attitude.pitch * 57.2958
                     self.rollInDegrees = data!.attitude.roll * 57.2958
@@ -380,10 +401,7 @@ extension FlightComputer {
     ///
     /// Calculates Z acceleration
     ///
-    private func calculateAbsoluteZAccelration(
-        forGravity gravity: CMAcceleration,
-        forAcceleration acceleration: CMAcceleration
-    ) {
+    private func calculateAbsoluteZAccelration(forGravity gravity: CMAcceleration, forAcceleration acceleration: CMAcceleration) {
         // Gravity for orientation
         let gravityVector = Vector3(
             x: CGFloat(gravity.x),
@@ -424,6 +442,8 @@ extension FlightComputer {
             if data != nil {
                 self.altAvailable = true
                 DispatchQueue.main.async {
+                    let df = DateFormatter()
+                    df.dateFormat = "y-MM-dd H:mm:ss.SSSS"
                     self.baroAltitude = data!.altitude
                     self.baroAltitudeHistory.append(data!.altitude.rounded(toPlaces: 3))
                     

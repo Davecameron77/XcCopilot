@@ -7,20 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B216425B2C376F6800AF7EC8 /* paragliding.png in Resources */ = {isa = PBXBuildFile; fileRef = B216425A2C376F6800AF7EC8 /* paragliding.png */; };
 		B247F0E92B312D320063FCA7 /* FlightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B247F0E82B312D320063FCA7 /* FlightView.swift */; };
 		B247F0EB2B314D060063FCA7 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B247F0EA2B314D060063FCA7 /* Extensions.swift */; };
 		B247F0ED2B314E120063FCA7 /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = B247F0EC2B314E120063FCA7 /* Enums.swift */; };
 		B25144662B40F57D00364C7F /* FlightRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B25144652B40F57C00364C7F /* FlightRecorder.swift */; };
 		B25441202B58DE4B00C476EF /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B254411F2B58DE4B00C476EF /* SoundManager.swift */; };
-		B276F8A12B34D2C3001A7CF7 /* Glider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B276F8A02B34D2C3001A7CF7 /* Glider.swift */; };
-		B28BC7842B75D212005A8CB8 /* 200.wav in Resources */ = {isa = PBXBuildFile; fileRef = B28BC7822B75D212005A8CB8 /* 200.wav */; };
-		B28BC7852B75D212005A8CB8 /* 1000.wav in Resources */ = {isa = PBXBuildFile; fileRef = B28BC7832B75D212005A8CB8 /* 1000.wav */; };
+		B26756372C1E7CBD006C2362 /* Fragments.swift in Sources */ = {isa = PBXBuildFile; fileRef = B26756362C1E7CBD006C2362 /* Fragments.swift */; };
+		B26F8BF42C28D39600F3699F /* KalmanFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B26F8BF32C28D39300F3699F /* KalmanFilter.swift */; };
+		B27A78612C1FD74D001CE7E1 /* 6hz_ascend.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B27A785F2C1FD74D001CE7E1 /* 6hz_ascend.mp3 */; };
+		B27A78622C1FD74D001CE7E1 /* 4hz_ascend.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B27A785D2C1FD74D001CE7E1 /* 4hz_ascend.mp3 */; };
+		B27A78632C1FD74D001CE7E1 /* 2hz_descend.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B27A785C2C1FD74D001CE7E1 /* 2hz_descend.mp3 */; };
+		B27A78642C1FD74D001CE7E1 /* 6hz_descend.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B27A78602C1FD74D001CE7E1 /* 6hz_descend.mp3 */; };
+		B27A78652C1FD74D001CE7E1 /* 4hz_descend.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B27A785E2C1FD74D001CE7E1 /* 4hz_descend.mp3 */; };
+		B27A78662C1FD74D001CE7E1 /* 2hz_ascend.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B27A785B2C1FD74D001CE7E1 /* 2hz_ascend.mp3 */; };
+		B2913E972BA1617E00E7EF81 /* PlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2913E962BA1617E00E7EF81 /* PlaybackView.swift */; };
+		B292D9942C40ACF300DBEDCF /* CoreDataExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B292D9932C40ACF300DBEDCF /* CoreDataExtensions.swift */; };
 		B2A117DF2B1EC4B4003447E2 /* XcCopilotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A117DE2B1EC4B4003447E2 /* XcCopilotApp.swift */; };
 		B2A117E32B1EC4B5003447E2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B2A117E22B1EC4B5003447E2 /* Assets.xcassets */; };
 		B2A117E62B1EC4B5003447E2 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B2A117E52B1EC4B5003447E2 /* Preview Assets.xcassets */; };
 		B2A117F02B1EC4D4003447E2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A117EF2B1EC4D4003447E2 /* HomeView.swift */; };
-		B2A117F22B1EC55A003447E2 /* Flight.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A117F12B1EC55A003447E2 /* Flight.swift */; };
-		B2A117F42B1EC573003447E2 /* FlightFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A117F32B1EC573003447E2 /* FlightFrame.swift */; };
 		B2A117F72B1EC5D9003447E2 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A117F62B1EC5D9003447E2 /* MapView.swift */; };
 		B2A117F92B1EC600003447E2 /* InstrumentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A117F82B1EC600003447E2 /* InstrumentView.swift */; };
 		B2A117FB2B1EC613003447E2 /* LogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A117FA2B1EC613003447E2 /* LogbookView.swift */; };
@@ -30,26 +36,39 @@
 		B2A118042B1EC680003447E2 /* FlightRecorderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A118032B1EC680003447E2 /* FlightRecorderService.swift */; };
 		B2A118062B1EC69F003447E2 /* FlightComputer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A118052B1EC69F003447E2 /* FlightComputer.swift */; };
 		B2A118082B1EC6BB003447E2 /* XcCopilotViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A118072B1EC6BB003447E2 /* XcCopilotViewModel.swift */; };
+		B2BD979D2C437DD800AC5C4F /* AnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2BD979C2C437DD800AC5C4F /* AnalysisView.swift */; };
+		B2D37D312C4C32F700618844 /* Flight+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D37D2D2C4C32F700618844 /* Flight+CoreDataClass.swift */; };
+		B2D37D322C4C32F700618844 /* Flight+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D37D2E2C4C32F700618844 /* Flight+CoreDataProperties.swift */; };
+		B2D37D332C4C32F700618844 /* FlightFrame+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D37D2F2C4C32F700618844 /* FlightFrame+CoreDataClass.swift */; };
+		B2D37D342C4C32F700618844 /* FlightFrame+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D37D302C4C32F700618844 /* FlightFrame+CoreDataProperties.swift */; };
+		B2D37D3A2C4DCA8200618844 /* thermal_predictor.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = B2D37D392C4DCA8200618844 /* thermal_predictor.mlmodel */; };
 		B2E1800A2B94530B00C3C9CA /* ViewModelDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E180092B94530B00C3C9CA /* ViewModelDelegate.swift */; };
+		B2F0B45B2C2CCF9300A89F4B /* XCCopilot.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = B2F0B4592C2CCF9300A89F4B /* XCCopilot.xcdatamodeld */; };
 		B2F1FCD62B4FA28700396D91 /* Vector3.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2F1FCD52B4FA28700396D91 /* Vector3.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		B216425A2C376F6800AF7EC8 /* paragliding.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = paragliding.png; sourceTree = "<group>"; };
 		B247F0E82B312D320063FCA7 /* FlightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightView.swift; sourceTree = "<group>"; };
 		B247F0EA2B314D060063FCA7 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		B247F0EC2B314E120063FCA7 /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
 		B25144652B40F57C00364C7F /* FlightRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightRecorder.swift; sourceTree = "<group>"; };
 		B254411F2B58DE4B00C476EF /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
-		B276F8A02B34D2C3001A7CF7 /* Glider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Glider.swift; sourceTree = "<group>"; };
-		B28BC7822B75D212005A8CB8 /* 200.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = 200.wav; sourceTree = "<group>"; };
-		B28BC7832B75D212005A8CB8 /* 1000.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = 1000.wav; sourceTree = "<group>"; };
+		B26756362C1E7CBD006C2362 /* Fragments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fragments.swift; sourceTree = "<group>"; };
+		B26F8BF32C28D39300F3699F /* KalmanFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KalmanFilter.swift; sourceTree = "<group>"; };
+		B27A785B2C1FD74D001CE7E1 /* 2hz_ascend.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = 2hz_ascend.mp3; sourceTree = "<group>"; };
+		B27A785C2C1FD74D001CE7E1 /* 2hz_descend.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = 2hz_descend.mp3; sourceTree = "<group>"; };
+		B27A785D2C1FD74D001CE7E1 /* 4hz_ascend.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = 4hz_ascend.mp3; sourceTree = "<group>"; };
+		B27A785E2C1FD74D001CE7E1 /* 4hz_descend.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = 4hz_descend.mp3; sourceTree = "<group>"; };
+		B27A785F2C1FD74D001CE7E1 /* 6hz_ascend.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = 6hz_ascend.mp3; sourceTree = "<group>"; };
+		B27A78602C1FD74D001CE7E1 /* 6hz_descend.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = 6hz_descend.mp3; sourceTree = "<group>"; };
+		B2913E962BA1617E00E7EF81 /* PlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackView.swift; sourceTree = "<group>"; };
+		B292D9932C40ACF300DBEDCF /* CoreDataExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataExtensions.swift; sourceTree = "<group>"; };
 		B2A117DB2B1EC4B4003447E2 /* XcCopilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = XcCopilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B2A117DE2B1EC4B4003447E2 /* XcCopilotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XcCopilotApp.swift; sourceTree = "<group>"; };
 		B2A117E22B1EC4B5003447E2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B2A117E52B1EC4B5003447E2 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		B2A117EF2B1EC4D4003447E2 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		B2A117F12B1EC55A003447E2 /* Flight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Flight.swift; sourceTree = "<group>"; };
-		B2A117F32B1EC573003447E2 /* FlightFrame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightFrame.swift; sourceTree = "<group>"; };
 		B2A117F62B1EC5D9003447E2 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		B2A117F82B1EC600003447E2 /* InstrumentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstrumentView.swift; sourceTree = "<group>"; };
 		B2A117FA2B1EC613003447E2 /* LogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookView.swift; sourceTree = "<group>"; };
@@ -60,7 +79,14 @@
 		B2A118052B1EC69F003447E2 /* FlightComputer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightComputer.swift; sourceTree = "<group>"; };
 		B2A118072B1EC6BB003447E2 /* XcCopilotViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XcCopilotViewModel.swift; sourceTree = "<group>"; };
 		B2B87CBF2B2FB18C004456C3 /* XcCopilot.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = XcCopilot.entitlements; sourceTree = "<group>"; };
+		B2BD979C2C437DD800AC5C4F /* AnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisView.swift; sourceTree = "<group>"; };
+		B2D37D2D2C4C32F700618844 /* Flight+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Flight+CoreDataClass.swift"; sourceTree = "<group>"; };
+		B2D37D2E2C4C32F700618844 /* Flight+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Flight+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		B2D37D2F2C4C32F700618844 /* FlightFrame+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FlightFrame+CoreDataClass.swift"; sourceTree = "<group>"; };
+		B2D37D302C4C32F700618844 /* FlightFrame+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FlightFrame+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		B2D37D392C4DCA8200618844 /* thermal_predictor.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = thermal_predictor.mlmodel; sourceTree = "<group>"; };
 		B2E180092B94530B00C3C9CA /* ViewModelDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelDelegate.swift; sourceTree = "<group>"; };
+		B2F0B45A2C2CCF9300A89F4B /* XCCopilot.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = XCCopilot.xcdatamodel; sourceTree = "<group>"; };
 		B2F1FCD52B4FA28700396D91 /* Vector3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vector3.swift; sourceTree = "<group>"; };
 		B2F83CF72B50E70A00E6A5D2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -76,6 +102,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		B216425C2C376F7300AF7EC8 /* Images */ = {
+			isa = PBXGroup;
+			children = (
+				B216425A2C376F6800AF7EC8 /* paragliding.png */,
+			);
+			path = Images;
+			sourceTree = "<group>";
+		};
 		B2A117D22B1EC4B4003447E2 = {
 			isa = PBXGroup;
 			children = (
@@ -95,14 +129,15 @@
 		B2A117DD2B1EC4B4003447E2 /* XcCopilot */ = {
 			isa = PBXGroup;
 			children = (
-				B2F83CF72B50E70A00E6A5D2 /* Info.plist */,
-				B2B87CBF2B2FB18C004456C3 /* XcCopilot.entitlements */,
+				B216425C2C376F7300AF7EC8 /* Images */,
+				B2A117EC2B1EC4BC003447E2 /* Model */,
 				B2A117EE2B1EC4CA003447E2 /* View */,
 				B2A117ED2B1EC4C4003447E2 /* ViewModel */,
-				B2A117EC2B1EC4BC003447E2 /* Model */,
 				B2E766F42B54E39B00A2A1E4 /* Tones */,
 				B2A117DE2B1EC4B4003447E2 /* XcCopilotApp.swift */,
 				B2A117E22B1EC4B5003447E2 /* Assets.xcassets */,
+				B2B87CBF2B2FB18C004456C3 /* XcCopilot.entitlements */,
+				B2F83CF72B50E70A00E6A5D2 /* Info.plist */,
 				B2A117E42B1EC4B5003447E2 /* Preview Content */,
 			);
 			path = XcCopilot;
@@ -119,9 +154,13 @@
 		B2A117EC2B1EC4BC003447E2 /* Model */ = {
 			isa = PBXGroup;
 			children = (
-				B2A117F12B1EC55A003447E2 /* Flight.swift */,
-				B2A117F32B1EC573003447E2 /* FlightFrame.swift */,
-				B276F8A02B34D2C3001A7CF7 /* Glider.swift */,
+				B2D37D2D2C4C32F700618844 /* Flight+CoreDataClass.swift */,
+				B2D37D2E2C4C32F700618844 /* Flight+CoreDataProperties.swift */,
+				B2D37D2F2C4C32F700618844 /* FlightFrame+CoreDataClass.swift */,
+				B2D37D302C4C32F700618844 /* FlightFrame+CoreDataProperties.swift */,
+				B2F0B4592C2CCF9300A89F4B /* XCCopilot.xcdatamodeld */,
+				B292D9932C40ACF300DBEDCF /* CoreDataExtensions.swift */,
+				B2D37D392C4DCA8200618844 /* thermal_predictor.mlmodel */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -150,11 +189,12 @@
 		B2A117F52B1EC5D0003447E2 /* Pages */ = {
 			isa = PBXGroup;
 			children = (
+				B2BD979B2C437D0900AC5C4F /* SubPages */,
 				B2A117F62B1EC5D9003447E2 /* MapView.swift */,
 				B2A117F82B1EC600003447E2 /* InstrumentView.swift */,
 				B2A117FA2B1EC613003447E2 /* LogbookView.swift */,
 				B2A117FC2B1EC624003447E2 /* SettingsView.swift */,
-				B247F0E82B312D320063FCA7 /* FlightView.swift */,
+				B2BD979C2C437DD800AC5C4F /* AnalysisView.swift */,
 			);
 			path = Pages;
 			sourceTree = "<group>";
@@ -170,11 +210,25 @@
 			path = Protocols;
 			sourceTree = "<group>";
 		};
+		B2BD979B2C437D0900AC5C4F /* SubPages */ = {
+			isa = PBXGroup;
+			children = (
+				B247F0E82B312D320063FCA7 /* FlightView.swift */,
+				B2913E962BA1617E00E7EF81 /* PlaybackView.swift */,
+				B26756362C1E7CBD006C2362 /* Fragments.swift */,
+			);
+			path = SubPages;
+			sourceTree = "<group>";
+		};
 		B2E766F42B54E39B00A2A1E4 /* Tones */ = {
 			isa = PBXGroup;
 			children = (
-				B28BC7822B75D212005A8CB8 /* 200.wav */,
-				B28BC7832B75D212005A8CB8 /* 1000.wav */,
+				B27A785B2C1FD74D001CE7E1 /* 2hz_ascend.mp3 */,
+				B27A785C2C1FD74D001CE7E1 /* 2hz_descend.mp3 */,
+				B27A785D2C1FD74D001CE7E1 /* 4hz_ascend.mp3 */,
+				B27A785E2C1FD74D001CE7E1 /* 4hz_descend.mp3 */,
+				B27A785F2C1FD74D001CE7E1 /* 6hz_ascend.mp3 */,
+				B27A78602C1FD74D001CE7E1 /* 6hz_descend.mp3 */,
 			);
 			path = Tones;
 			sourceTree = "<group>";
@@ -182,6 +236,7 @@
 		B2F83CF62B50D94200E6A5D2 /* Extras */ = {
 			isa = PBXGroup;
 			children = (
+				B26F8BF32C28D39300F3699F /* KalmanFilter.swift */,
 				B247F0EA2B314D060063FCA7 /* Extensions.swift */,
 				B247F0EC2B314E120063FCA7 /* Enums.swift */,
 				B2F1FCD52B4FA28700396D91 /* Vector3.swift */,
@@ -252,9 +307,14 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B28BC7842B75D212005A8CB8 /* 200.wav in Resources */,
-				B28BC7852B75D212005A8CB8 /* 1000.wav in Resources */,
 				B2A117E62B1EC4B5003447E2 /* Preview Assets.xcassets in Resources */,
+				B27A78612C1FD74D001CE7E1 /* 6hz_ascend.mp3 in Resources */,
+				B27A78622C1FD74D001CE7E1 /* 4hz_ascend.mp3 in Resources */,
+				B27A78632C1FD74D001CE7E1 /* 2hz_descend.mp3 in Resources */,
+				B27A78642C1FD74D001CE7E1 /* 6hz_descend.mp3 in Resources */,
+				B216425B2C376F6800AF7EC8 /* paragliding.png in Resources */,
+				B27A78652C1FD74D001CE7E1 /* 4hz_descend.mp3 in Resources */,
+				B27A78662C1FD74D001CE7E1 /* 2hz_ascend.mp3 in Resources */,
 				B2A117E32B1EC4B5003447E2 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -267,26 +327,34 @@
 			buildActionMask = 2147483647;
 			files = (
 				B2A117F92B1EC600003447E2 /* InstrumentView.swift in Sources */,
-				B276F8A12B34D2C3001A7CF7 /* Glider.swift in Sources */,
+				B2D37D3A2C4DCA8200618844 /* thermal_predictor.mlmodel in Sources */,
 				B2A118022B1EC66A003447E2 /* FlightComputerService.swift in Sources */,
 				B2A117F02B1EC4D4003447E2 /* HomeView.swift in Sources */,
 				B247F0ED2B314E120063FCA7 /* Enums.swift in Sources */,
+				B26756372C1E7CBD006C2362 /* Fragments.swift in Sources */,
+				B2F0B45B2C2CCF9300A89F4B /* XCCopilot.xcdatamodeld in Sources */,
 				B2A117F72B1EC5D9003447E2 /* MapView.swift in Sources */,
 				B2A117FD2B1EC624003447E2 /* SettingsView.swift in Sources */,
-				B2A117F42B1EC573003447E2 /* FlightFrame.swift in Sources */,
+				B2D37D312C4C32F700618844 /* Flight+CoreDataClass.swift in Sources */,
+				B2D37D322C4C32F700618844 /* Flight+CoreDataProperties.swift in Sources */,
+				B2D37D332C4C32F700618844 /* FlightFrame+CoreDataClass.swift in Sources */,
+				B2D37D342C4C32F700618844 /* FlightFrame+CoreDataProperties.swift in Sources */,
+				B2BD979D2C437DD800AC5C4F /* AnalysisView.swift in Sources */,
 				B247F0E92B312D320063FCA7 /* FlightView.swift in Sources */,
 				B25441202B58DE4B00C476EF /* SoundManager.swift in Sources */,
 				B2E1800A2B94530B00C3C9CA /* ViewModelDelegate.swift in Sources */,
 				B2F1FCD62B4FA28700396D91 /* Vector3.swift in Sources */,
 				B2A117FB2B1EC613003447E2 /* LogbookView.swift in Sources */,
 				B2A118042B1EC680003447E2 /* FlightRecorderService.swift in Sources */,
+				B26F8BF42C28D39600F3699F /* KalmanFilter.swift in Sources */,
 				B25144662B40F57D00364C7F /* FlightRecorder.swift in Sources */,
 				B2A118082B1EC6BB003447E2 /* XcCopilotViewModel.swift in Sources */,
 				B247F0EB2B314D060063FCA7 /* Extensions.swift in Sources */,
 				B2A118062B1EC69F003447E2 /* FlightComputer.swift in Sources */,
-				B2A117F22B1EC55A003447E2 /* Flight.swift in Sources */,
 				B2A117DF2B1EC4B4003447E2 /* XcCopilotApp.swift in Sources */,
 				B2A118002B1EC64F003447E2 /* FlightAnalyzerService.swift in Sources */,
+				B292D9942C40ACF300DBEDCF /* CoreDataExtensions.swift in Sources */,
+				B2913E972BA1617E00E7EF81 /* PlaybackView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -520,6 +588,19 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCVersionGroup section */
+		B2F0B4592C2CCF9300A89F4B /* XCCopilot.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				B2F0B45A2C2CCF9300A89F4B /* XCCopilot.xcdatamodel */,
+			);
+			currentVersion = B2F0B45A2C2CCF9300A89F4B /* XCCopilot.xcdatamodel */;
+			path = XCCopilot.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
 	};
 	rootObject = B2A117D32B1EC4B4003447E2 /* Project object */;
 }

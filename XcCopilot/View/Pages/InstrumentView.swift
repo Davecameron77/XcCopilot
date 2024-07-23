@@ -5,19 +5,33 @@
 //
 
 import SwiftUI
+import SwiftData
+import WeatherKit
 
 struct InstrumentView: View {
     @EnvironmentObject var vm: XcCopilotViewModel
-    
+    @Environment(\.modelContext) var context
+        
     var body: some View {
         
         NavigationView {
             VStack {
-                Button(vm.flightComputer.inFlight ? "End Flight" : "Start Flight") {
-                    if vm.flightComputer.inFlight {
-                        vm.flightComputer.stopFlying()
+                Button {
+                    if vm.flightState == .landed {
+                        vm.armForFlight()
+                    } else if vm.flightState == .armed {
+                        vm.startFlying()
                     } else {
-                        vm.flightComputer.startFlying()
+                        vm.stopFlying()
+                    }
+                } label: {
+                    switch vm.flightState {
+                    case .landed:
+                        Text("Arm for Flight")
+                    case .armed:
+                        Text("Begin Flight")
+                    case .inFlight:
+                        Text("End Flight")
                     }
                 }
                 .font(.title)
@@ -28,16 +42,23 @@ struct InstrumentView: View {
                 ScrollView {
                     VStack {
                         Divider()
+                        
                         HStack {
                             InstrumentBox(label: "Flight Time", value: vm.flightTime.formatted())
                             Divider()
-                            InstrumentBox(label: "Dummy", value: "69")
+                            InstrumentBox(
+                                label: "Glide Ratio", 
+                                value: String(vm.glideRatio) + " / 1",
+                                unit: ""
+                            )
                         }
+                        
                         Divider()
+                        
                         HStack {
                             InstrumentBox(
-                                label: "Vertical Speed: ",
-                                value: String(format: "%.2f", vm.verticalVelocityMetresPerSecond),
+                                label: "Vertical Speed",
+                                value: String(format: "%.2f", vm.verticalSpeedMps),
                                 unit: vm.verticalSpeedUnit.rawValue
                             )
                             Divider()
@@ -47,7 +68,9 @@ struct InstrumentView: View {
                                 unit: "m/s²"
                             )
                         }
+                        
                         Divider()
+                        
                         HStack {
                             InstrumentBox(
                                 label: "Baro Altitude",
@@ -61,7 +84,9 @@ struct InstrumentView: View {
                                 unit: vm.elevationUnit.rawValue
                             )
                         }
+                        
                         Divider()
+                        
                         HStack {
                             InstrumentBox(
                                 label: "Elevation",
@@ -75,7 +100,9 @@ struct InstrumentView: View {
                                 unit: vm.speedUnit.rawValue
                             )
                         }
+                        
                         Divider()
+                        
                         HStack {
                             InstrumentBox(
                                 label: "Heading",
@@ -89,6 +116,7 @@ struct InstrumentView: View {
                                 unit: "°"
                             )
                         }
+                        
                         Divider()
                     }
                 }
@@ -102,44 +130,4 @@ struct InstrumentView: View {
 #Preview {
     InstrumentView()
         .environmentObject(XcCopilotViewModel())
-}
-
-struct InstrumentBox<T: StringProtocol>: View {
-    var label: String = "Measurement: "
-    var value: T
-    var unit: String?
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("\(label):")
-                .font(.title2)
-                .padding(5)
-            Spacer()
-            HStack {
-                Spacer()
-                Text(value)
-                Text(unit ?? "")
-            }
-            .font(.title)
-            .padding(3)
-        }
-        .padding(0)
-    }
-}
-
-struct InstrumentRow<T: StringProtocol>: View {
-    var label: String = "Measurement: "
-    var value: T
-    var unit: String?
-    
-    var body: some View {
-        HStack {
-            Text(label)
-            Spacer()
-            Text(value)
-            Text(unit ?? "")
-        }
-        .padding(.vertical, 3)
-        .font(.title2)
-    }
 }

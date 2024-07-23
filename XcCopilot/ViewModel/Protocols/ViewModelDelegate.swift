@@ -10,7 +10,5 @@ import os
 
 protocol ViewModelDelegate {
     var logger: Logger? { get set }
-    
     func showAlert(withText: String)
-
 }

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    @StateObject var vm: XcCopilotViewModel = .init()
+    @StateObject private var vm = XcCopilotViewModel()
     
     var body: some View {
         TabView {
@@ -32,6 +32,13 @@ struct HomeView: View {
                     Label("Logbook", systemImage: "book")
                 }
                 .tag("logbook")
+            
+            AnalysisView()
+                .environmentObject(vm)
+                .tabItem {
+                    Label("Analysis", systemImage: "compass.drawing")
+                }
+                .tag("analysis")
 
             SettingsView()
                 .environmentObject(vm)

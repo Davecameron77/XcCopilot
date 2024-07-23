@@ -30,13 +30,23 @@ protocol FlightComputerService {
     var terrainElevation: Double { get }
     var calculatedElevation: Double { get }
     var glideRangeInMetres: Double { get }
+    var glideRatio: Double { get }
     var verticalVelocityMetresPerSecond: Double { get }
     var verticalAccelerationMetresPerSecondSquared: Double { get }
     var headingToNearestThermal: Double { get }
     var distanceToNearestThermal: Double { get }
     var flightTime: TimeInterval { get }
     
-    func startFlying()
+    var altAvailable: Bool { get }
+    var gpsAvailable: Bool { get }
+    var motionAvailable: Bool { get }
+    
+    func startFlying() throws
     func stopFlying()
 }
 
+enum FlightComputerError: Error {
+    case altNotAvailable(String?)
+    case gpsNotAvailable(String?)
+    case motionNotAvailable(String?)
+}

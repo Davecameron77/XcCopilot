@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CoreData
 import CoreLocation
 import CoreMotion
 import MapKit
@@ -13,48 +14,50 @@ import SwiftUI
 import os
 import WeatherKit
 import UniformTypeIdentifiers
+import SwiftData
 
 class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
-    
-    @Environment(\.modelContext) var context
-    
     var logger: Logger? = .init(
         subsystem: Bundle.main.bundleIdentifier!,
         category: String(describing: XcCopilotViewModel.self)
     )
     
+    var flightState: FlightState = .landed
+    
     // Alert vars
-    @Published var alertText                                          = ""
-    @Published var alertShowing                                       = false
+    @Published var alertText = ""
+    @Published var alertShowing = false
    
     // Motion
-    @Published var pitchInDegrees: Double                             = 0.0
-    @Published var rollInDegrees: Double                              = 0.0
-    @Published var yawInDegrees: Double                               = 0.0
-    @Published var verticalAccelerationMetresPerSecondSquared: Double = 0.0
+    @Published var verticalAccelerationMetresPerSecondSquared = 0.0
     
     // GPS
-    @Published var gpsCoords: CLLocationCoordinate2D                  = CLLocationCoordinate2D.init(latitude: 0.0, longitude: 0.0)
-    @Published var gpsAltitude: CLLocationDistance                    = CLLocationDistance.zero
-    @Published var gpsSpeed: CLLocationSpeed                          = CLLocationSpeed.zero
-    @Published var gpsCourse: CLLocationDirection                     = CLLocationDirection.zero
+    @Published var gpsCoords = CLLocationCoordinate2D.init(latitude: 0.0, longitude: 0.0)
+    @Published var gpsAltitude = CLLocationDistance.zero
+    @Published var gpsSpeed = CLLocationSpeed.zero
+    @Published var gpsCourse = CLLocationDirection.zero
     
     // Altimeter
-    @Published var baroAltitude: Double                               = 0.0
-    @Published var calculatedElevation: Double                        = 0.0
-    @Published var verticalVelocityMetresPerSecond: Double            = 0.0
-    @Published var glideRangeInMetres: Double                         = 0.0
-    @Published var nearestThermalHeading: Double                      = 0.0
-    @Published var nearestThermalDistance: Double                     = 0.0
+    @Published var baroAltitude = 0.0
+    @Published var calculatedElevation = 0.0
+    @Published var verticalSpeedMps = 0.0
+    @Published var glideRangeInMetres = 0.0
+    @Published var nearestThermalHeading = 0.0
+    @Published var nearestThermalDistance = 0.0
+    @Published var glideRatio = 1.0
+    
+    // Permissions
+    @Published var altAvailable = false
+    @Published var gpsAvailable = false
+    @Published var motionAvailable = false
     
     // Compass
-    @Published var magneticHeading: Double = 0.0
+    @Published var magneticHeading = 0.0
     
     // Weather
     @Published var currentWeather: Weather?
     
     // Flight Recorder
-    @Published var logbook: [Flight] = [Flight]()
     @Published var flightTime: Duration = .zero
     
     // Map
@@ -68,7 +71,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     
     // Settings
     /// True in case user has audio selected active
-    @AppStorage("audioActive") var audioActive: Bool = true {
+    @AppStorage("audioActive") var audioActive = true {
        willSet {
           DispatchQueue.main.async {
              self.objectWillChange.send()
@@ -76,7 +79,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
        }
     }
     /// The vario volume to use
-    @AppStorage("varioVolume") var varioVolume: Double = 100.0 {
+    @AppStorage("varioVolume") var varioVolume = 100.0 {
         willSet {
            DispatchQueue.main.async {
               self.objectWillChange.send()
@@ -130,27 +133,27 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         }
     }
     
-    let REFRESH_FREQUENCY: Double = 0.1
+    let REFRESH_FREQUENCY = 1.0
     private var updateTimer: Timer?
-    private var audioTimer: Timer?
     
-    private var currentWeatherTimestamp: Date = Date.distantPast
+    private var currentWeatherTimestamp = Date.distantPast
     var readyToFly: Bool { flightComputer.readyToFly }
     var flightComputer: FlightComputerService
-    var flightRecorder: FlightRecorderService
+    var flightRecorder: FlightRecorder
     let weatherService = WeatherService()
     
     ///
     /// Init a new ViewModel with default properties
     ///
     init() {
-        self.mapPosition = MapCameraPosition.userLocation(followsHeading: true, fallback: cameraBackup)
+        mapPosition = MapCameraPosition.userLocation(followsHeading: true, fallback: cameraBackup)
         
         flightComputer = FlightComputer()
         flightRecorder = FlightRecorder()
+        
         flightComputer.delegate = self
         
-        /// Run loop for the ViewModel, polling the flight computer and updating display vars
+        // Run loop for the ViewModel, polling the flight computer and updating display vars
         updateTimer = Timer.scheduledTimer(withTimeInterval: REFRESH_FREQUENCY,
                                            repeats: true) { timer in
             self.updateFlightVars()
@@ -160,73 +163,109 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     }
     
     ///
+    /// Arms to be ready for flight
+    ///
+    func armForFlight() {
+        flightState = .armed
+        Task {
+            try await flightRecorder.armForFlight()
+        }
+    }
+    
+    ///
+    /// Starts a Flight
+    ///
+    func startFlying() {
+        flightState = .inFlight
+        do {
+            try flightComputer.startFlying()
+        } catch  {
+            logger?.debug("\(error.localizedDescription)")
+        }
+    }
+    
+    ///
+    /// Ends a Flight
+    ///
+    func stopFlying() {
+        flightState = .landed
+        flightComputer.stopFlying()
+        Task {
+            do {
+                try await flightRecorder.endFlight(withWeather: currentWeather)
+            } catch {
+                showAlert(withText: error.localizedDescription)
+                logger?.debug("\(error.localizedDescription)")
+            }
+        }
+    }
+    
+    ///
     /// Updates VM flight vars for display in the GUI
     ///
     func updateFlightVars() {
-        self.pitchInDegrees = self.flightComputer.pitchInDegrees
-        self.rollInDegrees = self.flightComputer.rollInDegrees
-        self.yawInDegrees = self.flightComputer.yawInDegrees
-        self.verticalVelocityMetresPerSecond = self.flightComputer.verticalVelocityMetresPerSecond
-        self.verticalAccelerationMetresPerSecondSquared = self.flightComputer.verticalAccelerationMetresPerSecondSquared
-        self.glideRangeInMetres = self.flightComputer.glideRangeInMetres
+        verticalSpeedMps = flightComputer.verticalVelocityMetresPerSecond
+        verticalAccelerationMetresPerSecondSquared = flightComputer.verticalAccelerationMetresPerSecondSquared
+        glideRangeInMetres = flightComputer.glideRangeInMetres
+        glideRatio = flightComputer.glideRatio
         
-        self.gpsCoords = self.flightComputer.currentCoords
-        self.gpsAltitude = self.elevationUnits(elevationMetres: self.flightComputer.gpsAltitude)
-        self.gpsSpeed = self.speedUnits(speedMetresSecond: self.flightComputer.gpsSpeed)
+        gpsCoords = flightComputer.currentCoords
+        gpsAltitude = elevationUnits(elevationMetres: flightComputer.gpsAltitude)
+        gpsSpeed = speedUnits(speedMetresSecond: flightComputer.gpsSpeed)
 
         // In case a course is not detected, assigns the current magnetic heading for display
-        self.gpsCourse = self.flightComputer.gpsCourse == -1.0 ? self.magneticHeading : self.flightComputer.gpsCourse
+        gpsCourse = flightComputer.gpsCourse == -1.0 ? magneticHeading : flightComputer.gpsCourse
         
-        self.baroAltitude = self.elevationUnits(elevationMetres: self.flightComputer.baroAltitude)
-        self.calculatedElevation = self.elevationUnits(elevationMetres: self.flightComputer.calculatedElevation)
-        self.magneticHeading = self.flightComputer.magneticHeading
+        baroAltitude = elevationUnits(elevationMetres: flightComputer.baroAltitude)
+        calculatedElevation = elevationUnits(elevationMetres: flightComputer.calculatedElevation)
+        magneticHeading = flightComputer.magneticHeading
         
-        self.nearestThermalHeading = self.flightComputer.headingToNearestThermal
-        self.nearestThermalDistance = self.flightComputer.distanceToNearestThermal
+        // Detect a launch
+        if flightState == .armed && gpsSpeed > 5.5 {
+            startFlying()
+        }
         
-        flightTime = Duration.seconds(self.flightComputer.flightTime)
-        
-        playVarioSound()
+        // Flight specific tracking
+        if flightState == .inFlight {
+            nearestThermalHeading = flightComputer.headingToNearestThermal
+            nearestThermalDistance = flightComputer.distanceToNearestThermal
+            
+            flightTime = Duration.seconds(flightComputer.flightTime)
+            
+            playVarioSound()
+        }
     }
     
     ///
     /// Plays tones based on current vertical velocity
     ///
     func playVarioSound() {
-        // Set playback frequency based on vertical velocity
-        var tonesPlayed = 0
-        var tonesToPlay = 0
-        var varioFrequency = 0.0
+        if !audioActive { return }
         
-        switch abs(self.verticalVelocityMetresPerSecond) {
-        case 0..<0.25:
-            // Trivial displacement
+        switch verticalSpeedMps {
+        case -100 ..< -4.0:
+            // Play at 6hz
+            SoundManager.shared.playTone(forFrequency: .sixHzDescend)
+        case -4.0 ..< -1.0:
+            // Play at 4hz
+            SoundManager.shared.playTone(forFrequency: .fourHzDescend)
+        case -1.0 ..< -0.25:
+            // Play at 2hz
+            SoundManager.shared.playTone(forFrequency: .twoHzDescend)
+        case -0.25 ..< 0.25:
+            // Trivial vertical motion
             return
-        case 0.25..<1:
-            // Light displacement 1hz frequency
-            varioFrequency = 1.0
-            tonesToPlay = 1
-        case 1..<2:
-            // Medium displacement 2hz frequency
-            varioFrequency = 0.5
-            tonesToPlay = 2
+        case 0.25 ..< 2.0:
+            // Play at 2hz
+            SoundManager.shared.playTone(forFrequency: .twoHzAscend)
+        case 2.0 ..< 4.0:
+            // Play at 4hz
+            SoundManager.shared.playTone(forFrequency: .fourHzAscend)
+        case 4.0 ..< 100:
+            // Play at 4hz
+            SoundManager.shared.playTone(forFrequency: .sixHzAscend)
         default:
-            // Heavy displacement 4hz frequency
-            varioFrequency = 0.25
-            tonesToPlay = 4
-        }
-        
-        // Only schedule tones on signifigant displacement
-        if flightComputer.inFlight && audioActive && abs(self.verticalVelocityMetresPerSecond) > 0.25 {
-            // Cancel existing audio
-            audioTimer?.invalidate()
-            
-            audioTimer = Timer.scheduledTimer(withTimeInterval: varioFrequency, repeats: true) { timer in
-                if tonesPlayed <= tonesToPlay {
-                    self.verticalVelocityMetresPerSecond > 0 ? SoundManager.shared.playAscendingTone() : SoundManager.shared.playDescendingTone()
-                    tonesPlayed += 1
-                }
-            }
+            return
         }
     }
     
@@ -236,12 +275,12 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     func updateWeather() {
         if Date.now.distance(to: self.currentWeatherTimestamp) > TimeInterval(1800) || self.currentWeather == nil {
             let location = CLLocation(
-                latitude: self.flightComputer.currentCoords.latitude,
-                longitude: self.flightComputer.currentCoords.longitude
+                latitude: flightComputer.currentCoords.latitude,
+                longitude: flightComputer.currentCoords.longitude
             )
             
             Task {
-                if let weather = try? await self.fetchWeather(for: location) {
+                if let weather = try? await self.fetchWeather(forLocation: location) {
                     DispatchQueue.main.async {
                         self.currentWeather = weather
                         self.currentWeatherTimestamp = Date.now
@@ -254,7 +293,8 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     /// Fetches a weather update
     ///
-    func fetchWeather(for location: CLLocation) async throws -> Weather? {
+    /// - Parameter forLocation - The location to fetch weather for
+    func fetchWeather(forLocation location: CLLocation) async throws -> Weather? {
         var weather: Weather?
         try weather = await weatherService.weather(for: location)
         return weather
@@ -265,40 +305,112 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     func logFlightFrame() {
         // Log flight
-        if self.flightComputer.inFlight {
-            let frame = FlightFrame(
-                pitchInDegrees: self.pitchInDegrees,
-                rollInDegrees: self.rollInDegrees,
-                yawInDegrees: self.yawInDegrees,
-                acceleration: self.flightComputer.acceleration,
-                gravity: self.flightComputer.gravity,
-                gpsAltitude: self.gpsAltitude,
-                gpsCourse: self.gpsCourse,
-                gpsCoords: self.gpsCoords,
-                baroAltitude: self.baroAltitude,
-                verticalVelocity: self.verticalVelocityMetresPerSecond
-            )
-            
-            // Store the frame
-            if !self.flightRecorder.recording {
-                self.flightRecorder.startRecording()
+        if flightComputer.inFlight {
+            Task {
+                do {
+                    try await flightRecorder.storeFrame(
+                        acceleration: flightComputer.acceleration,
+                        gravity: flightComputer.gravity,
+                        gpsAltitude: gpsAltitude,
+                        gpsCourse: gpsCourse,
+                        gpsCoords: gpsCoords,
+                        baroAltitude: baroAltitude,
+                        verticalVelocity: verticalSpeedMps
+                    )
+                } catch {
+                    logger?.debug("\(error.localizedDescription)")
+                }
             }
-            self.flightRecorder.storeFrame(frame: frame)
         }
     }
     
     ///
     /// Imports an IGC file
     ///
-    func importIgcFile(forUrl url: URL) async -> Flight? {
-        return try? await flightRecorder.createFlightToImport(forUrl: url)
+    /// - Parameter forUrl: The file to import
+    func importIgcFile(forUrl url: URL) async -> Bool {
+        let task = Task {
+            do {
+                try await flightRecorder.importFlight(forUrl: url)
+                return true
+            } catch {
+                logger?.debug("\(error.localizedDescription)")
+                showAlert(withText: "Error importing IGC file: \(error.localizedDescription)")
+            }
+            return false
+        }
+        return await task.result.get()
     }
     
     ///
     /// Exports an IGC file
     ///
-    func exportIgcFile(flight: Flight) async {
-        try? await flightRecorder.exportFlight(flightToExport: flight)
+    /// - Parameter flight: The flight to export
+    func exportIgcFile(flight: Flight) async -> IgcFile? {
+        do {
+            return try await flightRecorder.exportFlight(flightToExport: flight)
+        } catch {
+            logger?.debug("\(error.localizedDescription)")
+            showAlert(withText: "Failed to export flight")
+        }
+        return nil
+    }
+    
+    ///
+    /// Returns flights for logbook
+    ///
+    func getFlights() async throws -> [Flight] {
+        do {
+            return try await flightRecorder.getFlights()
+        } catch {
+            logger?.debug("\(error.localizedDescription)")
+            showAlert(withText: "Failed to fetch flights")
+        }
+        return [Flight]()
+    }
+    
+    ///
+    /// Returns flights around given region for analysis view
+    ///
+    func getFlightsAroundRegion(_ region: CLLocationCoordinate2D) async throws -> [Flight] {
+        do {
+            return try await flightRecorder.getFlightsAroundRegion(region)
+        } catch {
+            logger?.debug("\(error.localizedDescription)")
+            showAlert(withText: "Failed to fetch flights")
+        }
+        return [Flight]()
+    }
+    
+    ///
+    /// Updates a stored flight's title
+    ///
+    /// - Parameter flightToUpdate: The flight to update the title for
+    /// - Parameter newTitle: The new title to assign
+    func updateFlightTitle(flightToUpdate flight: Flight, withTitle newTitle: String) {
+        Task {
+            do {
+                try await flightRecorder.updateFlightTitle(forFlight: flight, withTitle: newTitle)
+            } catch {
+                logger?.debug("\(error)")
+                showAlert(withText: "Error updating title")
+            }
+        }
+    }
+    
+    ///
+    /// Deletes a flight from CoreData
+    ///
+    /// - Parameter flight: The flight to delete
+    func deleteFlight(_ flight: Flight) {
+        Task {
+            do {
+                try await flightRecorder.deleteFlight(flight)
+            } catch {
+                logger?.debug("\(error)")
+                showAlert(withText: "Failed to delete flight: \(flight.title ?? "Unknown")")
+            }
+        }
     }
 }
 
@@ -311,8 +423,14 @@ extension XcCopilotViewModel {
     ///
     /// - Parameter withText: The text to show
     func showAlert(withText alertText: String) {
-        self.alertText = alertText
-        self.alertShowing = true
+        
+        Task(priority: .userInitiated) {
+            await MainActor.run {
+                self.alertText = alertText
+                self.alertShowing = true
+            }
+        }
+        
     }
     
     /// Converts a speed from standard m/s to the configured speed unit
@@ -336,7 +454,7 @@ extension XcCopilotViewModel {
     
     /// Converts an elevation from standard metres to the configured elevation unit
     ///
-    /// - Parameter elevationMetresd: The input elevation to convert
+    /// - Parameter elevationMetres: The input elevation to convert
     private func elevationUnits(elevationMetres: Double) -> Double {
         if elevationMetres == 0.0 {
             return 0.0

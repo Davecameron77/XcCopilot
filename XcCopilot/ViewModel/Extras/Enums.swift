@@ -7,6 +7,12 @@
 
 import Foundation
 
+enum FlightState: CaseIterable {
+    case landed
+    case armed
+    case inFlight
+}
+
 enum SpeedUnits: String, CaseIterable, Codable {
     case kmh = "km/h"
     case mph = "mph"
@@ -47,3 +53,41 @@ enum VolumeLevels: Int, Equatable, CaseIterable {
     }
 }
 
+enum HRecord: String {   
+    case HFDTE, HFFXA, HFPLT, HFCM2, HFGTY, HFGID, HFDTM, HFRFW, HFRHW, HFFTY, HFGPS, HFPRS, HFCID, HFCCL, HFSIT
+    
+    var description: LocalizedStringResource {
+        switch self {
+        case .HFDTE:
+            "HFDTE"
+        case .HFFXA:
+            "HFFXA"
+        case .HFPLT:
+            "HFPLT"
+        case .HFCM2:
+            "HFCM2"
+        case .HFGTY:
+            "HFGTY"
+        case .HFGID:
+            "HFGID"
+        case .HFDTM:
+            "HFDTM"
+        case .HFRFW:
+            "HFRFW"
+        case .HFFTY:
+            "HFFTY"
+        case .HFRHW:
+            "HFRHW"
+        case .HFGPS:
+            "HFGPS"
+        case .HFPRS:
+            "HFPRS"
+        case .HFCID:
+            "HFCID"
+        case .HFCCL:
+            "HFCCL"
+        case .HFSIT:
+            "HFSIT"
+        }
+    }
+}
