@@ -6,9 +6,17 @@
 //
 
 import Foundation
+import MapKit
 
 protocol FlightAnalyzerService {
-    func analyzeCurrentFLight()
-    func analyzeFlight(flightToAnalyze: Flight)
-    func analyzeStoredFlights(flightsToAnalyze: [Flight])
+    func analyzeStoredFlights(
+        _ flights: [Flight],
+        aroundCoords coords: CLLocationCoordinate2D,
+        withinSpan span: MKCoordinateSpan
+    ) throws -> DmsQuadtree
+}
+
+enum FlightAnalyzerError: Error {
+    case noDataProvided(String)
+    case noResultsFound(String)
 }

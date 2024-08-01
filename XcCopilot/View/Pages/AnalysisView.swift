@@ -16,21 +16,50 @@ struct AnalysisView: View {
     @State private var position = MapCameraPosition.region(
         MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 49.2357,
                                                           longitude: -121.9),
-                           span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                           span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.0793)
         ))
     
-    @State private var topLeft = CLLocationCoordinate2D(latitude: 49.2357, longitude: -121.9)
-    @State private var bottomRight = CLLocationCoordinate2D(latitude: 49.2357, longitude: -121.9)
-    @State private var searchResults: [MapMark] = []
+    @State private var mapCenter: CLLocationCoordinate2D?
+    @State private var mapSpan: MKCoordinateSpan?
+    
+    @State private var searchableFlights: [Flight] = []
+    @State private var tree: DmsQuadtree?
     
     var body: some View {
         Map(position: $position, interactionModes: .all, scope: mapScope) {
-            ForEach(searchResults) { result in
-                MapCircle(center: result.coords, radius: 1000)
-                    .foregroundStyle(.red)
+            if tree != nil {
+                ForEach(tree!.returnResults(), id: \.self) { myRegion in
+                    
+                    Annotation("", coordinate: myRegion.region.center) {
+                        RoundedRectangle(cornerRadius: 40)
+                            .fill(
+                                myRegion.count > 10 ?
+                                RadialGradient(
+                                    stops: [.init(color: .red.opacity(0.85), location: 0.0),
+                                            .init(color: .yellow.opacity(0.5), location: 0.5)],
+                                    center: .center,
+                                    startRadius: 0,
+                                    endRadius: 40
+                                ) :
+                                    RadialGradient(
+                                        stops: [.init(color: .yellow.opacity(0.75), location: 0.0),
+                                                .init(color: .yellow.opacity(0.5), location: 0.15),
+                                                .init(color: .green.opacity(0.25), location: 0.25),
+                                                .init(color: .green.opacity(0.15), location: 0.5)],
+                                        center: .center,
+                                        startRadius: 0,
+                                        endRadius: 40
+                                    )
+                            )
+                            .blur(radius: 2.5)
+                            .frame(width: 50, height: 50)
+                            .opacity(myRegion.region.span.latitudeDelta > (mapSpan!.latitudeDelta * 0.1) ? 0 : 1)
+                            
+                    }
+                }
             }
         }
-        .mapStyle(.hybrid(elevation: .realistic))
+        .mapStyle(.standard(elevation: .realistic))
         .mapControls {
             MapUserLocationButton()
             MapCompass()
@@ -38,9 +67,10 @@ struct AnalysisView: View {
         }
         .safeAreaInset(edge: .bottom, content: {
             Button {
-                analyzeFlights()
+                guard mapCenter != nil && mapSpan != nil else { return }
+                tree = vm.analyzeFlights(searchableFlights, aroundCoords: mapCenter!, withinSpan: mapSpan!)
             } label: {
-                Text("Analyze")
+                Text("Analyze \(searchableFlights.count) flights")
                     .padding()
                     .background(Color.blue)
                     .foregroundStyle(.white)
@@ -50,104 +80,28 @@ struct AnalysisView: View {
             }
         })
         .onAppear {
-            let center = position.region?.center
-            let latDelta = position.region?.span.latitudeDelta
-            let longDelta = position.region?.span.longitudeDelta
-            
-            let topLat = center!.latitude + 0.5 * latDelta!
-            let bottomLat = center!.latitude - 0.5 * latDelta!
-            let leftLong = center!.longitude - 0.5 * longDelta!
-            let rightLong = center!.longitude + 0.5 * longDelta!
-            
-            topLeft = CLLocationCoordinate2D(latitude: topLat, longitude: leftLong)
-            bottomRight = CLLocationCoordinate2D(latitude: bottomLat, longitude: rightLong)
-        }
-        .onMapCameraChange { mapContext in
-            let center = mapContext.camera.centerCoordinate
-            let latDelta = mapContext.region.span.latitudeDelta
-            let longDelta = mapContext.region.span.longitudeDelta
-            
-            let topLat = center.latitude + 0.5 * latDelta
-            let bottomLat = center.latitude - 0.5 * latDelta
-            let leftLong = center.longitude - 0.5 * longDelta
-            let rightLong = center.longitude + 0.5 * longDelta
-            
-            topLeft = CLLocationCoordinate2D(latitude: topLat, longitude: leftLong)
-            bottomRight = CLLocationCoordinate2D(latitude: bottomLat, longitude: rightLong)
-        }
-    }
-    
-    func analyzeFlights() {
-        do {
-            let config = MLModelConfiguration()
-            let model = try thermal_predictor(configuration: config)
-            
-            Task(priority: .medium) {
-                let topLeftLatitudeDms = topLeft.latitudeToDMS()
-                let topLeftLongitudeDms = topLeft.longitudeToDMS()
-                let bottomRightLatitudeDms = bottomRight.latitudeToDMS()
-                let bottomRightLongitudeDms = bottomRight.longitudeToDMS()
+            if let center = position.region?.center,
+               let span = position.region?.span {
                 
-                let latDegreesTo = topLeftLatitudeDms.0 > bottomRightLatitudeDms.0 ? topLeftLatitudeDms.0 : bottomRightLatitudeDms.0
-                let latMinutesTo = topLeftLatitudeDms.1 > bottomRightLatitudeDms.1 ? topLeftLatitudeDms.1 : bottomRightLatitudeDms.1
-                let latDegreesFrom = topLeftLatitudeDms.0 < bottomRightLatitudeDms.0 ? topLeftLatitudeDms.0 : topLeftLatitudeDms.0
-                let latMinutesFrom = topLeftLatitudeDms.1 < bottomRightLatitudeDms.1 ? topLeftLatitudeDms.1 : topLeftLatitudeDms.1
+                mapCenter = center
+                mapSpan = span
                 
-                let longDegreesTo = topLeftLongitudeDms.0 > bottomRightLongitudeDms.0 ? topLeftLongitudeDms.0 : bottomRightLongitudeDms.0
-                let longMinutesTo = topLeftLongitudeDms.1 > bottomRightLongitudeDms.1 ? topLeftLongitudeDms.1 : bottomRightLongitudeDms.1
-                let longDegreesFrom = topLeftLongitudeDms.0 < bottomRightLongitudeDms.0 ? topLeftLongitudeDms.0 : bottomRightLongitudeDms.0
-                let longMinutesFrom = topLeftLongitudeDms.1 < bottomRightLongitudeDms.1 ? topLeftLongitudeDms.1 : bottomRightLongitudeDms.1
-                
-                searchResults.removeAll()
-                
-                for latDegree in latDegreesFrom...latDegreesTo {
-                    for latMinute in latMinutesFrom...latMinutesTo {
-                        for longDegree in longDegreesFrom...longDegreesTo {
-                            for longMinute in longMinutesFrom...longMinutesTo {
-                                let result = try model.prediction(
-                                    ZLATITUDEDEGREES: Int64(latDegree),
-                                    ZLATITUDEMINUTES: Int64(latMinute),
-                                    ZLATITUDESECONDS: 0,
-                                    ZLONGITUDEDEGREES: Int64(longDegree),
-                                    ZLONGITUDEMINUTES: Int64(longMinute),
-                                    ZLONGITUDESECONDS: 0)
-                                
-                                print("Searching Lat: \(latDegree).\(latMinute) | Lng: \(longDegree).\(longMinute) - \(result.ZVERTICALSPEED)")
-                                if result.ZVERTICALSPEED > 0.0 {
-                                    let latitude = dmsToDecimal(degrees: topLeftLatitudeDms.0, minutes: latMinute, seconds: 0, direction: (topLeftLatitudeDms.0 > 0 ? "N" : "S"))
-                                    let longitude = dmsToDecimal(degrees: topLeftLongitudeDms.0, minutes: longMinute, seconds: 0, direction: (topLeftLongitudeDms.0 > 0 ? "E" : "W"))
-                                    
-                                    searchResults.append(MapMark(coords: CLLocationCoordinate2D(latitude: latitude, longitude: longitude)))
-                                }
-                            }
-                        }
-                    }
-                }
-                for result in searchResults {
-                    print("\(result.coords.latitude) : \(result.coords.longitude)")
+                Task(priority: .userInitiated) {
+                    searchableFlights = await vm.getFlightsAroundRegion(center, withSpan: span)
                 }
             }
-        } catch {
-            vm.showAlert(withText: "CoreML error: \(error)")
+        }
+        .onMapCameraChange { mapContext in
+            
+            mapCenter = mapContext.region.center
+            mapSpan = mapContext.region.span
+            
+            Task(priority: .userInitiated) {
+                searchableFlights = await vm.getFlightsAroundRegion(mapContext.camera.centerCoordinate, withSpan: mapContext.region.span)
+            }
+            
         }
     }
-    
-    func dmsToDecimal(degrees: Int, minutes: Int, seconds: Double, direction: String) -> Double {
-        var decimalDegrees = Double(degrees) + Double(minutes) / 60.0 + seconds / 3600.0
-        
-        if direction == "S" || direction == "W" {
-            decimalDegrees *= -1
-        }
-        
-        return decimalDegrees
-    }
-}
-
-struct MapMark: Identifiable {
-    let id = UUID()
-    let coords: CLLocationCoordinate2D
-    let altitude: Double = 0.0
-    let verticalSpeed: Double = 0.0
 }
 
 //#Preview {

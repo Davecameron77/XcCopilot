@@ -140,16 +140,19 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     var readyToFly: Bool { flightComputer.readyToFly }
     var flightComputer: FlightComputerService
     var flightRecorder: FlightRecorder
+    var flightAnalzyer: FlightAnalyzer
     let weatherService = WeatherService()
     
     ///
     /// Init a new ViewModel with default properties
     ///
     init() {
+        UIApplication.shared.isIdleTimerDisabled = true
         mapPosition = MapCameraPosition.userLocation(followsHeading: true, fallback: cameraBackup)
         
         flightComputer = FlightComputer()
         flightRecorder = FlightRecorder()
+        flightAnalzyer = FlightAnalyzer()
         
         flightComputer.delegate = self
         
@@ -372,9 +375,9 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     /// Returns flights around given region for analysis view
     ///
-    func getFlightsAroundRegion(_ region: CLLocationCoordinate2D) async throws -> [Flight] {
+    func getFlightsAroundRegion(_ region: CLLocationCoordinate2D, withSpan span: MKCoordinateSpan) async -> [Flight] {
         do {
-            return try await flightRecorder.getFlightsAroundRegion(region)
+            return try await flightRecorder.getFlightsAroundCoords(region, withSpan: span)
         } catch {
             logger?.debug("\(error.localizedDescription)")
             showAlert(withText: "Failed to fetch flights")
@@ -411,6 +414,31 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
                 showAlert(withText: "Failed to delete flight: \(flight.title ?? "Unknown")")
             }
         }
+    }
+    
+    ///
+    /// Forwards a request to analyze flights
+    ///
+    /// - Parameter : Array of flights to analyze
+    /// - Parameter withinSpan: The area to search
+    func analyzeFlights(
+        _ flights: [Flight],
+        aroundCoords coords: CLLocationCoordinate2D,
+        withinSpan span: MKCoordinateSpan
+    ) -> DmsQuadtree? {
+        do {
+            let tree = try flightAnalzyer.analyzeStoredFlights(flights, aroundCoords: coords, withinSpan: span)
+            if tree.divided || tree.points.count > 0 {
+                return tree
+            } else {
+                showAlert(withText: "No data found for provided flights")
+            }
+        } catch {
+            logger?.debug("\(error)")
+            showAlert(withText: "Failed to analyze flights: \(error)")
+        }
+        
+        return nil
     }
 }
 

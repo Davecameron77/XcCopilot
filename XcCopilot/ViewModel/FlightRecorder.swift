@@ -8,6 +8,7 @@
 import CoreData
 import CoreLocation
 import CoreMotion
+import MapKit
 import SwiftUI
 import UniformTypeIdentifiers
 import WeatherKit
@@ -74,7 +75,7 @@ actor FlightRecorder {
     func endFlight(withWeather weather: Weather?) async throws {
         guard flight != nil else { throw FlightRecorderError.invalidState("No flight assigned for recording") }
         
-        try concludeFlight(flight!, andWeather: weather)
+        try concludeImport(flight!, andWeather: weather)
     }
     
 }
@@ -96,18 +97,46 @@ extension FlightRecorder {
     ///
     /// Returns flights that took off within the given region
     ///
-    func getFlightsAroundRegion(_ region: CLLocationCoordinate2D) throws -> [Flight] {
+    func getFlightsAroundCoords(
+        _ coords: CLLocationCoordinate2D,
+        withSpan span: MKCoordinateSpan
+    ) throws -> [Flight] {
         
         let request = Flight.fetchRequest()
-        let maxLat = region.latitude + 1
-        let minLat = region.latitude - 1
-        let maxLong = region.longitude + 1
-        let minLong = region.longitude - 1
+        let latSpan = span.latitudeDelta
+        let longSpan = span.longitudeDelta
         
-        let predicate = NSPredicate(format: "launchLatitude >= %f AND launchLatitude <= %f AND launchLongitude >= %f AND launchLongitude <= %f", minLat, maxLat, minLong, maxLong)
+        var minLat, maxLat, minLong, maxLong: Double
+        let multiplier = 1.5
+        
+        if coords.latitude > 0 {
+            maxLat = coords.latitude + latSpan * multiplier
+            minLat = coords.latitude - latSpan * multiplier
+        } else {
+            maxLat = coords.latitude + latSpan * multiplier
+            minLat = coords.latitude - latSpan * multiplier
+        }
+        
+        if coords.longitude > 0 {
+            maxLong = coords.longitude + longSpan * multiplier
+            minLong = coords.longitude - longSpan * multiplier
+        } else {
+            maxLong = coords.longitude + longSpan * multiplier
+            minLong = coords.longitude - longSpan * multiplier
+        }
+
+        
+        let predicate = NSPredicate(
+            format: "launchLatitude >= %f AND launchLatitude <= %f AND launchLongitude >= %f AND launchLongitude <= %f",
+            minLat,
+            maxLat,
+            minLong,
+            maxLong
+        )
         request.predicate = predicate
         
         let result = try context.fetch(request)
+
         return result
     }
     
@@ -162,7 +191,7 @@ extension FlightRecorder {
                 }
             }
                         
-            try concludeFlight(flight, andWeather: nil)
+            try concludeImport(flight, andWeather: nil)
             
 //            try context.save()
             
@@ -174,6 +203,98 @@ extension FlightRecorder {
             try deleteFlight(flight!)
             print("Import Error: \(error)")
             throw error
+        }
+    }
+    
+    
+    ///
+    /// Finishes appending metadata after a flight file has been imported
+    ///
+    /// - Parameter flight: The flight to conclude
+    /// - Parameter weather: The weather to append, if available
+    private func concludeImport(_ flight: Flight, andWeather weather: Weather?) throws {
+        if let frames = flight.frames?.allObjects as? [FlightFrame] {
+            guard let first = frames.min(by: { $0.timestamp! < $1.timestamp! }),
+                  let last = frames.max(by: { $0.timestamp! < $1.timestamp! }) else {
+                throw DataError.invalidData("Invalid flight dates found in file")
+            }
+            
+            // Duration
+            flight.startDate = first.timestamp
+            flight.endDate = last.timestamp
+            
+            let duration = flight.startDate!.distance(to: flight.endDate!)
+            let hour = String(format: "%02d", duration.hour)
+            let minute = String(format: "%02d", duration.minute)
+            let second = String(format: "%02d", duration.second)
+            flight.duration = "\(hour):\(minute):\(second)"
+            
+            let interval = last.timestamp!.timeIntervalSince(first.timestamp!)
+            flight.duration = interval.hourMinuteSecond
+            
+            // Launch / Land
+            flight.launchLatitude = first.latitude
+            flight.launchLongitude = first.longitude
+            flight.landLatitude = last.latitude
+            flight.landLongitude = last.longitude
+            
+            // Derrived vertical speed
+            let sortedFrames = frames.sorted(by: { $0.timestamp! < $1.timestamp! })
+            
+            for index in 0...sortedFrames.count - 1 {
+                
+                var derrivedVerticalSpeed = 0.0
+                
+                if index == 0 {
+                    derrivedVerticalSpeed = 0.0
+                } else if index == 1 {
+                    derrivedVerticalSpeed = sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
+                } else if index == 2 {
+                    var delta = 0.0
+                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
+                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
+                 
+                    derrivedVerticalSpeed = delta / 2.0
+                } else if index == 3 {
+                    var delta = 0.0
+                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
+                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
+                    delta += sortedFrames[index-2].baroAltitude - sortedFrames[index-3].baroAltitude
+                                     
+                    derrivedVerticalSpeed = delta / 3.0
+                } else {
+                    var delta = 0.0
+                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
+                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
+                    delta += sortedFrames[index-2].baroAltitude - sortedFrames[index-3].baroAltitude
+                    delta += sortedFrames[index-3].baroAltitude - sortedFrames[index-4].baroAltitude
+                                     
+                    derrivedVerticalSpeed = delta / 4.0
+                }
+                
+                sortedFrames[index].derrivedVerticalSpeed = derrivedVerticalSpeed
+            }
+            
+            // Boundaries
+            flight.maxLatitude = frames.max(by: { $0.latitude < $1.latitude })?.latitude ?? 0.0
+            flight.minLatitude = frames.min(by: { $0.latitude < $1.latitude })?.latitude ?? 0.0
+            flight.maxLongitude = frames.max(by: { $0.longitude < $1.longitude })?.longitude ?? 0.0
+            flight.minLongitude = frames.min(by: { $0.longitude < $1.longitude })?.longitude ?? 0.0
+            
+            // Meta
+            flight.varioHardwareVer = "iPhone"
+            flight.varioFirmwareVer = ""
+            flight.gpsModel = "iPhone"
+            #if !DEBUG
+            flight.flightTitle = "Imported Flight: \(flightDate.formatted(.dateTime.year().month().day()))"
+            #endif
+            
+            // Weather
+            if weather != nil {
+                flight.addWeather(weather: weather!)
+            }
+            
+            try context.save()
         }
     }
     
@@ -344,92 +465,6 @@ extension FlightRecorder {
         let frame = FlightFrame(context: context)
         try context.save()
         return frame
-    }
-    
-    private func concludeFlight(_ flight: Flight, andWeather weather: Weather?) throws {
-        if let frames = flight.frames?.allObjects as? [FlightFrame] {
-            guard let first = frames.min(by: { $0.timestamp! < $1.timestamp! }),
-                  let last = frames.max(by: { $0.timestamp! < $1.timestamp! }) else {
-                throw DataError.invalidData("Invalid flight dates found in file")
-            }
-            
-            // Duration
-            flight.startDate = first.timestamp
-            flight.endDate = last.timestamp
-            
-            let duration = flight.startDate!.distance(to: flight.endDate!)
-            let hour = String(format: "%02d", duration.hour)
-            let minute = String(format: "%02d", duration.minute)
-            let second = String(format: "%02d", duration.second)
-            flight.duration = "\(hour):\(minute):\(second)"
-            
-            let interval = last.timestamp!.timeIntervalSince(first.timestamp!)
-            flight.duration = interval.hourMinuteSecond
-            
-            // Launch / Land
-            flight.launchLatitude = first.latitude
-            flight.launchLongitude = first.longitude
-            flight.landLatitude = last.latitude
-            flight.landLongitude = last.longitude
-            
-            // Derrived vertical speed
-            let sortedFrames = frames.sorted(by: { $0.timestamp! < $1.timestamp! })
-            
-            for index in 0...sortedFrames.count - 1 {
-                
-                var derrivedVerticalSpeed = 0.0
-                
-                if index == 0 {
-                    derrivedVerticalSpeed = 0.0
-                } else if index == 1 {
-                    derrivedVerticalSpeed = sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                } else if index == 2 {
-                    var delta = 0.0
-                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
-                 
-                    derrivedVerticalSpeed = delta / 2.0
-                } else if index == 3 {
-                    var delta = 0.0
-                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
-                    delta += sortedFrames[index-2].baroAltitude - sortedFrames[index-3].baroAltitude
-                                     
-                    derrivedVerticalSpeed = delta / 3.0
-                } else {
-                    var delta = 0.0
-                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
-                    delta += sortedFrames[index-2].baroAltitude - sortedFrames[index-3].baroAltitude
-                    delta += sortedFrames[index-3].baroAltitude - sortedFrames[index-4].baroAltitude
-                                     
-                    derrivedVerticalSpeed = delta / 4.0
-                }
-                
-                sortedFrames[index].derrivedVerticalSpeed = derrivedVerticalSpeed
-            }
-            
-            // Boundaries
-            flight.maxLatitude = frames.max(by: { $0.latitude < $1.latitude })?.latitude ?? 0.0
-            flight.minLatitude = frames.min(by: { $0.latitude < $1.latitude })?.latitude ?? 0.0
-            flight.maxLongitude = frames.max(by: { $0.longitude < $1.longitude })?.longitude ?? 0.0
-            flight.minLongitude = frames.min(by: { $0.longitude < $1.longitude })?.longitude ?? 0.0
-            
-            // Meta
-            flight.varioHardwareVer = "iPhone"
-            flight.varioFirmwareVer = ""
-            flight.gpsModel = "iPhone"
-            #if !DEBUG
-            flight.flightTitle = "Imported Flight: \(flightDate.formatted(.dateTime.year().month().day()))"
-            #endif
-            
-            // Weather
-            if weather != nil {
-                flight.addWeather(weather: weather!)
-            }
-            
-            try context.save()
-        }
     }
        
     private func getFlight(withIgcId igcId: String) throws -> Flight {
