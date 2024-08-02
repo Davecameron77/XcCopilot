@@ -83,7 +83,6 @@ extension FlightFrame {
         gpsAltitude = gpsAlt
     }
     
-
     func assignVars(
         acceleration: CMAcceleration,
         gravity: CMAcceleration,
@@ -91,12 +90,9 @@ extension FlightFrame {
         gpsCourse: Double,
         gpsCoords: CLLocationCoordinate2D,
         baroAltitude: Double,
-        verticalSpeed: Double,
-        flightId: String,
-        flight: Flight
+        verticalSpeed: Double
     ) {
         id = UUID()
-        flightID = flightId
         timestamp = Date.now
         accelerationX = acceleration.x
         accelerationY = acceleration.y

@@ -133,7 +133,7 @@ struct FlightView: View {
         .fileExporter(isPresented: $exportPanelOpen,
                       document: fileToExport,
                       contentType: UTType.igcType,
-                      defaultFilename: "\(flight.title!)") { result in
+                      defaultFilename: "\(flight.title ?? "Unknown flight")") { result in
             
             switch result {
             case .success(let url):

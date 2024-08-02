@@ -311,7 +311,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         if flightComputer.inFlight {
             Task {
                 do {
-                    try await flightRecorder.storeFrame(
+                    try await flightRecorder.storeActiveFrame(
                         acceleration: flightComputer.acceleration,
                         gravity: flightComputer.gravity,
                         gpsAltitude: gpsAltitude,
@@ -321,7 +321,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
                         verticalVelocity: verticalSpeedMps
                     )
                 } catch {
-                    logger?.debug("\(error.localizedDescription)")
+                    logger?.debug("Error creating frame: \(error.localizedDescription)")
                 }
             }
         }

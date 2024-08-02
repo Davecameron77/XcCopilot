@@ -35,14 +35,14 @@ actor FlightRecorder {
     ///
     /// - Parameter flight - The flight to store frames in
     func armForFlight() throws {
-        flight = try createFlight()
+        flight = try createFlightWithTitle()
     }
     
     ///
     /// Stores a frame recorded by the flight computer
     ///
     /// - Parameter frame - The frame to store
-    func storeFrame(
+    func storeActiveFrame(
         acceleration: CMAcceleration,
         gravity: CMAcceleration,
         gpsAltitude: Double,
@@ -53,7 +53,7 @@ actor FlightRecorder {
     ) throws {
         guard flight != nil else { throw FlightRecorderError.invalidState("No flight assigned for recording") }
         
-        let frame = try createFrame()
+        let frame = try createFrame(forFlight: nil)
         frame.assignVars(
             acceleration: acceleration,
             gravity: gravity,
@@ -61,12 +61,10 @@ actor FlightRecorder {
             gpsCourse: gpsCourse,
             gpsCoords: gpsCoords,
             baroAltitude: baroAltitude,
-            verticalSpeed: verticalVelocity,
-            flightId: flight!.igcID!,
-            flight: flight!
+            verticalSpeed: verticalVelocity
         )
         
-        try addFrame(frame)
+        try saveFrame(frame)
     }
     
     ///
@@ -75,7 +73,7 @@ actor FlightRecorder {
     func endFlight(withWeather weather: Weather?) async throws {
         guard flight != nil else { throw FlightRecorderError.invalidState("No flight assigned for recording") }
         
-        try concludeImport(flight!, andWeather: weather)
+        try concludeStoringFlight(flight!, andWeather: weather)
     }
     
 }
@@ -141,6 +139,78 @@ extension FlightRecorder {
     }
     
     ///
+    /// Returns a stored flight with the given igcId
+    ///
+    /// - Parameter withIgcId: The id of the flight to load
+    private func getFlight(withIgcId igcId: String) throws -> Flight {
+        let request = Flight.fetchRequest()
+        request.predicate = NSPredicate(format: "igcID == %@", igcId)
+        let results = try context.fetch(request)
+        
+        if results.isEmpty {
+            throw CdError.noRecordsFound("No stored flight found")
+        } else {
+            return results.first!
+        }
+    }
+    
+    ///
+    /// Creates and stores a new flight with a given title, active or logbook
+    /// If no title is supplied, it is stored as 'Unknown Flight'
+    ///
+    private func createFlightWithTitle(_ title: String = "Unknown Flight") throws -> Flight {
+        let flight = Flight(context: context)
+        flight.id = UUID()
+        flight.igcID = flight.id?.uuidString
+        flight.title = title
+        
+        context.insert(flight)
+        try context.save()
+        
+        return flight
+    }
+
+    ///
+    /// Creates a frame for a provided flight or the currently active flight
+    ///
+    /// - Parameter forFlight: The flight to assign the frame to
+    private func createFrame(forFlight flight: Flight?) throws -> FlightFrame {
+        
+        guard flight != nil || self.flight != nil else { throw CdError.recordingFailure("Error creating flightframe, no flight found") }
+        
+        let frame = FlightFrame(context: context)
+        frame.id = UUID()
+        
+        if flight != nil {
+            frame.flight = flight ?? self.flight
+            frame.flightID = flight!.igcID ?? self.flight!.igcID
+        } else {
+            frame.flight = self.flight
+            frame.flightID = self.flight!.igcID
+        }
+        
+        return frame
+    }
+    
+    ///
+    /// Persists a frame to the database
+    ///
+    /// - Parameter frame: The frame to store
+    private func saveFrame(_ frame: FlightFrame) throws {
+        context.insert(frame)
+        try context.save()
+    }
+    
+    ///
+    /// Deletes a flight
+    ///
+    /// - Parameter flight - The flight to delete
+    func deleteFlight(_ flight: Flight) throws {
+        context.delete(flight)
+        try context.save()
+    }
+    
+    ///
     /// Updates a stored flights title
     ///
     /// - Parameter forFlight: The flight to update the title for
@@ -159,60 +229,11 @@ extension FlightRecorder {
     }
     
     ///
-    /// Deletes a flight
-    ///
-    /// - Parameter flight - The flight to delete
-    func deleteFlight(_ flight: Flight) throws {
-        context.delete(flight)
-        try context.save()
-    }
-    
-    ///
-    /// Imports a .IGC file
-    ///
-    /// - Parameter forUrl: The URL from which the flight shall be imported
-    func importFlight(forUrl url: URL) async throws {
-        
-        do {
-            
-            var flight = try createFlight(withTitle: url.lastPathComponent)
-            flight.imported = true
-            
-            for try await line in url.lines {
-                
-                if line.starts(with: "A") {
-                    processARecord(record: line, forFlight: &flight)
-                }
-                else if line.starts(with: "B") {
-                    try processBRecord(record: line, forFlight: flight)
-                }
-                else if line.starts(with: "H") {
-                    try processHRecord(record: line, forFlight: &flight)
-                }
-            }
-                        
-            try concludeImport(flight, andWeather: nil)
-            
-//            try context.save()
-            
-            #if DEBUG
-            print("Imported a flight: \(flight.title!)")
-            #endif
-            
-        } catch {
-            try deleteFlight(flight!)
-            print("Import Error: \(error)")
-            throw error
-        }
-    }
-    
-    
-    ///
-    /// Finishes appending metadata after a flight file has been imported
+    /// Finishes appending metadata after a flight file has been imported / concluded
     ///
     /// - Parameter flight: The flight to conclude
     /// - Parameter weather: The weather to append, if available
-    private func concludeImport(_ flight: Flight, andWeather weather: Weather?) throws {
+    private func concludeStoringFlight(_ flight: Flight, andWeather weather: Weather?) throws {
         if let frames = flight.frames?.allObjects as? [FlightFrame] {
             guard let first = frames.min(by: { $0.timestamp! < $1.timestamp! }),
                   let last = frames.max(by: { $0.timestamp! < $1.timestamp! }) else {
@@ -241,38 +262,40 @@ extension FlightRecorder {
             // Derrived vertical speed
             let sortedFrames = frames.sorted(by: { $0.timestamp! < $1.timestamp! })
             
-            for index in 0...sortedFrames.count - 1 {
-                
-                var derrivedVerticalSpeed = 0.0
-                
-                if index == 0 {
-                    derrivedVerticalSpeed = 0.0
-                } else if index == 1 {
-                    derrivedVerticalSpeed = sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                } else if index == 2 {
-                    var delta = 0.0
-                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
-                 
-                    derrivedVerticalSpeed = delta / 2.0
-                } else if index == 3 {
-                    var delta = 0.0
-                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
-                    delta += sortedFrames[index-2].baroAltitude - sortedFrames[index-3].baroAltitude
-                                     
-                    derrivedVerticalSpeed = delta / 3.0
-                } else {
-                    var delta = 0.0
-                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
-                    delta += sortedFrames[index-2].baroAltitude - sortedFrames[index-3].baroAltitude
-                    delta += sortedFrames[index-3].baroAltitude - sortedFrames[index-4].baroAltitude
-                                     
-                    derrivedVerticalSpeed = delta / 4.0
+            if frames.first!.baroAltitude == 0.0 {
+                for index in 0...sortedFrames.count - 1 {
+                    
+                    var derrivedVerticalSpeed = 0.0
+                    
+                    if index == 0 {
+                        derrivedVerticalSpeed = 0.0
+                    } else if index == 1 {
+                        derrivedVerticalSpeed = sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
+                    } else if index == 2 {
+                        var delta = 0.0
+                        delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
+                        delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
+                     
+                        derrivedVerticalSpeed = delta / 2.0
+                    } else if index == 3 {
+                        var delta = 0.0
+                        delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
+                        delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
+                        delta += sortedFrames[index-2].baroAltitude - sortedFrames[index-3].baroAltitude
+                                         
+                        derrivedVerticalSpeed = delta / 3.0
+                    } else {
+                        var delta = 0.0
+                        delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
+                        delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
+                        delta += sortedFrames[index-2].baroAltitude - sortedFrames[index-3].baroAltitude
+                        delta += sortedFrames[index-3].baroAltitude - sortedFrames[index-4].baroAltitude
+                                         
+                        derrivedVerticalSpeed = delta / 4.0
+                    }
+                    
+                    sortedFrames[index].derrivedVerticalSpeed = derrivedVerticalSpeed
                 }
-                
-                sortedFrames[index].derrivedVerticalSpeed = derrivedVerticalSpeed
             }
             
             // Boundaries
@@ -295,6 +318,43 @@ extension FlightRecorder {
             }
             
             try context.save()
+        }
+    }
+    
+    ///
+    /// Imports a .IGC file
+    ///
+    /// - Parameter forUrl: The URL from which the flight shall be imported
+    func importFlight(forUrl url: URL) async throws {
+        
+        do {
+            
+            var flight = try createFlightWithTitle(url.lastPathComponent)
+            flight.imported = true
+            
+            for try await line in url.lines {
+                
+                if line.starts(with: "A") {
+                    processARecord(record: line, forFlight: &flight)
+                }
+                else if line.starts(with: "B") {
+                    try processBRecord(record: line, forFlight: flight)
+                }
+                else if line.starts(with: "H") {
+                    try processHRecord(record: line, forFlight: &flight)
+                }
+            }
+                        
+            try concludeStoringFlight(flight, andWeather: nil)
+            
+            #if DEBUG
+            print("Imported a flight: \(flight.title!)")
+            #endif
+            
+        } catch {
+            try deleteFlight(flight!)
+            print("Import Error: \(error)")
+            throw error
         }
     }
     
@@ -439,65 +499,23 @@ extension FlightRecorder {
             throw CdError.invalidState("Failed to export file for flight \(flight.title ?? "Unknown Flight")")
         }
     }
-}
-
-// CoreData functions
-extension FlightRecorder {
     
-    private func createFlight() throws -> Flight {
-        let flight = Flight(context: context)
-        flight.id = UUID()
-        flight.igcID = flight.id?.uuidString
-        return flight
-    }
-    
-    private func createFlight(withTitle title: String) throws -> Flight {
-        let flight = Flight(context: context)
-        flight.id = UUID()
-        flight.igcID = flight.id?.uuidString
-        flight.title = title
-        context.insert(flight)
-        try context.save()
-        return flight
-    }
-    
-    private func createFrame() throws -> FlightFrame {
-        let frame = FlightFrame(context: context)
-        try context.save()
-        return frame
-    }
-       
-    private func getFlight(withIgcId igcId: String) throws -> Flight {
-        let request = Flight.fetchRequest()
-        request.predicate = NSPredicate(format: "igcID == %@", igcId)
-        let results = try context.fetch(request)
-        
-        if results.isEmpty {
-            throw CdError.noRecordsFound("No stored flight found")
-        } else {
-            return results.first!
-        }
-    }
-    
-    private func createFrame(forFlight flight: Flight) throws -> FlightFrame {
-        let frame = FlightFrame(context: context)
-        frame.id = UUID()
-        frame.flight = flight
-        frame.flightID = flight.igcID
-        
-        return frame
-    }
-    
-    private func addFrame(_ frame: FlightFrame) throws {
-        context.insert(frame)
-        try context.save()
-    }
-    
+    ///
+    /// Processes an A record for an imported flight
+    ///
+    /// - Parameter record: The record to process
+    /// - Parameter flight (inout): The flight to assign the record to
+    #warning("Probably incomplete")
     private func processARecord(record line: String, forFlight flight: inout Flight) {
         // Flight ID
         flight.gpsModel = line.subString(from: 1, to: 3)
     }
     
+    ///
+    /// Processes a B record for an imported flight
+    ///
+    /// - Parameter record: The record to process
+    /// - Parameter flight: The flight to assign the record to
     private func processBRecord(record line: String, forFlight flight: Flight) throws {
         var dateComponents = DateComponents()
         dateComponents.year = FlightRecorder.flightDate.get(.year)
@@ -549,15 +567,18 @@ extension FlightRecorder {
             gpsCourse: 0,
             gpsCoords: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
             baroAltitude: baroAlt,
-            verticalSpeed: 0,
-            flightId: flight.igcID!,
-            flight: flight
+            verticalSpeed: 0
         )
         frame.timestamp = frameTs
         
-        try addFrame(frame)
+        try saveFrame(frame)
     }
     
+    ///
+    /// Processes an H record for a flight
+    ///
+    /// - Parameter record: The record to process
+    /// - Parameter flight (inout): The flight to assign the record to
     private func processHRecord(record line: String, forFlight flight: inout Flight) throws {
         // H Record
         switch line.subString(from: 0, to: 5) {
@@ -709,4 +730,3 @@ extension FlightRecorder {
         }
     }
 }
-
