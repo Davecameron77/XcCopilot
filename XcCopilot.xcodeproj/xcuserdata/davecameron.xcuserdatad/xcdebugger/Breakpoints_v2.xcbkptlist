@@ -7,16 +7,16 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "475EAEE2-A35B-42CC-A79C-9BB66B5FCB6B"
-            shouldBeEnabled = "No"
+            uuid = "96BCBDBF-0666-428A-97AE-71EC70E9EAC1"
+            shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "XcCopilot/ViewModel/FlightComputer.swift"
+            filePath = "XcCopilotTests/FlightRecorderTests.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "492"
-            endingLineNumber = "492"
-            landmarkName = "startBaroUpdates()"
+            startingLineNumber = "15"
+            endingLineNumber = "15"
+            landmarkName = "testImportFlight()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

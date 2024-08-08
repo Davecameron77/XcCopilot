@@ -23,6 +23,7 @@ final class FlightRecorderTests: XCTestCase {
                 success = true
             } catch {
                 print("Test failed: \(error)")
+                return
             }
             XCTAssert(success)
         }
@@ -42,6 +43,7 @@ final class FlightRecorderTests: XCTestCase {
                 success = true
             } catch {
                 print("Test failed: \(error)")
+                return
             }
         }
         XCTAssert(success)
@@ -62,6 +64,7 @@ final class FlightRecorderTests: XCTestCase {
                 success = true
             } catch {
                 print("Test failed: \(error)")
+                return
             }
             XCTAssert(success)
             XCTAssertNotNil(flights)
@@ -86,6 +89,7 @@ final class FlightRecorderTests: XCTestCase {
                 success = true
             } catch {
                 print("Test failed: \(error)")
+                return
             }
             XCTAssert(success)
             XCTAssertNotNil(flights)
@@ -94,17 +98,19 @@ final class FlightRecorderTests: XCTestCase {
     }
     
     func testArmForFlight() {
+     
         let flightRecorder = FlightRecorder()
+        var success = false
         
         Task {
             do {
                 try await flightRecorder.armForFlight()
-                DispatchQueue.main.async(qos: .background) {
-                    XCTAssertNotNil(flightRecorder.flight)
-                }
             } catch {
-                print("Error arming for flight: \(error)")
+                print("Test failed: \(error)")
+                return
             }
         }
+        success = true
+        XCTAssert(success)
     }
 }

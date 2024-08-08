@@ -208,7 +208,7 @@ class FlightComputer: NSObject,
         }
                 
         let predictedAltitude = kalmanFilter.stateEstimatePrior[0, 0]
-        let predictedVerticalVelocity = kalmanFilter.stateEstimatePrior[1, 0]
+//        let predictedVerticalVelocity = kalmanFilter.stateEstimatePrior[1, 0]
         
         // 3 - Gain - If filter lags or leads race to catch up
         
@@ -412,7 +412,7 @@ extension FlightComputer {
             if data != nil {
                 self.motionAvailable = true
                 
-                DispatchQueue.global(qos: .userInitiated).async {
+                Task(priority: .userInitiated) {
                     // Convert from radians to degrees
                     self.pitchInDegrees = data!.attitude.pitch * 57.2958
                     self.rollInDegrees = data!.attitude.roll * 57.2958
@@ -421,6 +421,7 @@ extension FlightComputer {
                     self.acceleration = data!.userAcceleration
                     self.gravity = data!.gravity
                 }
+                
             } else {
                 self.motionAvailable = false
             }
@@ -460,8 +461,11 @@ extension FlightComputer {
         altimeter.startAbsoluteAltitudeUpdates(to: refreshQueue) { data, error in
             
             if data != nil {
+                
                 self.altAvailable = true
-                DispatchQueue.main.async {
+                
+                Task(priority: .userInitiated) {
+                    
                     let df = DateFormatter()
                     df.dateFormat = "y-MM-dd H:mm:ss.SSSS"
                     self.baroAltitude = data!.altitude
@@ -493,7 +497,7 @@ extension FlightComputer {
                     
                     // Update elevation if last update is long enough ago
                     if Date.now - self.lastElevationUpdate > TimeInterval(self.SECONDS_BETWEEN_ELEVATION_UPDATES) {
-                        Task { await self.calculateElevation() }
+                        await self.calculateElevation()
                     }
                     
                 }

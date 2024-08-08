@@ -206,6 +206,10 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     /// Updates VM flight vars for display in the GUI
     ///
     func updateFlightVars() {
+        @MainActor
+        Task {
+            
+        }
         verticalSpeedMps = flightComputer.verticalVelocityMps
         verticalAccelerationMetresPerSecondSquared = flightComputer.verticalAccelerationMps2
         glideRangeInMetres = flightComputer.glideRangeInMetres
