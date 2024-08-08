@@ -147,7 +147,6 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     /// Init a new ViewModel with default properties
     ///
     init() {
-        UIApplication.shared.isIdleTimerDisabled = true
         mapPosition = MapCameraPosition.userLocation(followsHeading: true, fallback: cameraBackup)
         
         flightComputer = FlightComputer()
@@ -207,8 +206,8 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     /// Updates VM flight vars for display in the GUI
     ///
     func updateFlightVars() {
-        verticalSpeedMps = flightComputer.verticalVelocityMetresPerSecond
-        verticalAccelerationMetresPerSecondSquared = flightComputer.verticalAccelerationMetresPerSecondSquared
+        verticalSpeedMps = flightComputer.verticalVelocityMps
+        verticalAccelerationMetresPerSecondSquared = flightComputer.verticalAccelerationMps2
         glideRangeInMetres = flightComputer.glideRangeInMetres
         glideRatio = flightComputer.glideRatio
         

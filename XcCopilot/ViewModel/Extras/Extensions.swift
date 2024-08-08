@@ -44,6 +44,76 @@ extension MKCoordinateSpan {
     static let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.03, longitudeDelta: 0.03)
 }
 
+struct MyCoordinateRegion: Hashable {
+    var region: MKCoordinateRegion
+    var count = 0
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(region.center.latitude + region.center.longitude)
+    }
+    
+    static func == (lhs: MyCoordinateRegion, rhs: MyCoordinateRegion) -> Bool {
+        return lhs.region.center.latitude == rhs.region.center.latitude &&
+               lhs.region.center.longitude == rhs.region.center.longitude
+    }
+}
+
+extension MKCoordinateRegion {
+    
+    var boundingBoxCoordinates: [String: CLLocationCoordinate2D] {
+        let halfLatDelta = self.span.latitudeDelta / 2
+        let halfLngDelta = self.span.longitudeDelta / 2
+
+        let topLeft = CLLocationCoordinate2D(
+            latitude: self.center.latitude + halfLatDelta,
+            longitude: self.center.longitude - halfLngDelta
+        )
+        let bottomRight = CLLocationCoordinate2D(
+            latitude: self.center.latitude - halfLatDelta,
+            longitude: self.center.longitude + halfLngDelta
+        )
+        let bottomLeft = CLLocationCoordinate2D(
+            latitude: self.center.latitude - halfLatDelta,
+            longitude: self.center.longitude - halfLngDelta
+        )
+        let topRight = CLLocationCoordinate2D(
+            latitude: self.center.latitude + halfLatDelta,
+            longitude: self.center.longitude + halfLngDelta
+        )
+
+        return [
+            "topLeft": topLeft,
+            "topRight": topRight,
+            "bottomRight": bottomRight,
+            "bottomLeft": bottomLeft
+        ]
+    }
+    
+    func contains(coords: CLLocationCoordinate2D) -> Bool {
+        let topLat = self.center.latitude + 0.5 * self.span.latitudeDelta
+        let bottomLat = self.center.latitude - 0.5 * self.span.latitudeDelta
+        let leftLong = self.center.longitude - 0.5 * self.span.longitudeDelta
+        let rightLong = self.center.longitude + 0.5 * self.span.longitudeDelta
+        
+        if (coords.latitude  <= topLat && coords.latitude >= bottomLat &&
+            coords.longitude >= leftLong && coords.longitude <= rightLong) {
+            return true
+        } else {
+            return false
+        }
+    }
+ 
+    func intersects(searchRegion: MKCoordinateRegion) -> Bool {
+        let coords = self.boundingBoxCoordinates
+        for coord in coords {
+            if self.contains(coords: coord.value) {
+                return true
+            }
+        }
+        return false
+    }
+}
+
 extension Date {
     static func - (lhs: Date, rhs: Date) -> TimeInterval {
         return lhs.timeIntervalSinceReferenceDate - rhs.timeIntervalSinceReferenceDate
@@ -58,23 +128,11 @@ extension Date {
     }
 }
 
-extension Array where Element: BinaryInteger {
-
-    /// The average value of all the items in the array
-    var average: Double {
-        if self.isEmpty {
-            return 0.0
-        } else {
-            let sum = self.reduce(0, +)
-            return Double(sum) / Double(self.count)
-        }
-    }
-
-}
-
 extension Array where Element: BinaryFloatingPoint {
 
+    ///
     /// The average value of all the items in the array
+    ///
     var average: Double {
         if self.isEmpty {
             return 0.0
@@ -84,6 +142,9 @@ extension Array where Element: BinaryFloatingPoint {
         }
     }
 
+    ///
+    /// Calculates the average change in the array
+    ///
     func simpleMovingAverage() -> Double where Element == Double {
         guard self.count >= 1 else { return 0.0 }
         
@@ -94,9 +155,14 @@ extension Array where Element: BinaryFloatingPoint {
             sum += self[i+1] - self[i]
         }
         
-        return sum / Double(size)
+        let result = sum / Double(size)
+                
+        return result.isNaN ? 0.0 : result
     }
     
+    ///
+    /// Calculates a moving average in reverse, from the most recent record until an inversion is found
+    ///
     func effectiveMovingAverage() -> Double where Element == Double {
         guard self.count >= 3 else { return 0.0 }
         
@@ -167,10 +233,6 @@ extension TimeInterval {
     }
 }
 
-enum DataError: Error {
-    case invalidData(String)
-}
-
 struct HashableNode: Hashable, Identifiable {
     var id = UUID().uuidString
     let timestamp: Date
@@ -198,73 +260,12 @@ struct MapMark: Hashable, Identifiable {
     }
 }
 
-extension MKCoordinateRegion {
-    
-    var boundingBoxCoordinates: [String: CLLocationCoordinate2D] {
-        let halfLatDelta = self.span.latitudeDelta / 2
-        let halfLngDelta = self.span.longitudeDelta / 2
-
-        let topLeft = CLLocationCoordinate2D(
-            latitude: self.center.latitude + halfLatDelta,
-            longitude: self.center.longitude - halfLngDelta
-        )
-        let bottomRight = CLLocationCoordinate2D(
-            latitude: self.center.latitude - halfLatDelta,
-            longitude: self.center.longitude + halfLngDelta
-        )
-        let bottomLeft = CLLocationCoordinate2D(
-            latitude: self.center.latitude - halfLatDelta,
-            longitude: self.center.longitude - halfLngDelta
-        )
-        let topRight = CLLocationCoordinate2D(
-            latitude: self.center.latitude + halfLatDelta,
-            longitude: self.center.longitude + halfLngDelta
-        )
-
-        return [
-            "topLeft": topLeft,
-            "topRight": topRight,
-            "bottomRight": bottomRight,
-            "bottomLeft": bottomLeft
-        ]
-    }
-    
-    
-    func contains(coords: CLLocationCoordinate2D) -> Bool {
-        let topLat = self.center.latitude + 0.5 * self.span.latitudeDelta
-        let bottomLat = self.center.latitude - 0.5 * self.span.latitudeDelta
-        let leftLong = self.center.longitude - 0.5 * self.span.longitudeDelta
-        let rightLong = self.center.longitude + 0.5 * self.span.longitudeDelta
-        
-        if (coords.latitude  <= topLat && coords.latitude >= bottomLat &&
-            coords.longitude >= leftLong && coords.longitude <= rightLong) {
-            return true
-        } else {
-            return false
-        }
-    }
- 
-    func intersects(searchRegion: MKCoordinateRegion) -> Bool {
-        let coords = self.boundingBoxCoordinates
-        for coord in coords {
-            if self.contains(coords: coord.value) {
-                return true
-            }
-        }
-        return false
-    }
+struct Response: Codable {
+    var results: [Result]
 }
 
-struct MyCoordinateRegion: Hashable {
-    var region: MKCoordinateRegion
-    var count = 0
-    
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(region.center.latitude + region.center.longitude)
-    }
-    
-    static func == (lhs: MyCoordinateRegion, rhs: MyCoordinateRegion) -> Bool {
-        return lhs.region.center.latitude == rhs.region.center.latitude &&
-               lhs.region.center.longitude == rhs.region.center.longitude
-    }
+struct Result: Codable {
+    var latitude: Double
+    var longitude: Double
+    var elevation: Double
 }

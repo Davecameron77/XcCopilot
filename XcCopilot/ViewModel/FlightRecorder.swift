@@ -237,7 +237,7 @@ extension FlightRecorder {
         if let frames = flight.frames?.allObjects as? [FlightFrame] {
             guard let first = frames.min(by: { $0.timestamp! < $1.timestamp! }),
                   let last = frames.max(by: { $0.timestamp! < $1.timestamp! }) else {
-                throw DataError.invalidData("Invalid flight dates found in file")
+                throw CdError.recordingFailure("Invalid flight dates found in file")
             }
             
             // Duration
@@ -505,10 +505,9 @@ extension FlightRecorder {
     ///
     /// - Parameter record: The record to process
     /// - Parameter flight (inout): The flight to assign the record to
-    #warning("Probably incomplete")
     private func processARecord(record line: String, forFlight flight: inout Flight) {
         // Flight ID
-        flight.gpsModel = line.subString(from: 1, to: 3)
+        flight.gpsModel = line.subString(from: 1, to: 6)
     }
     
     ///
