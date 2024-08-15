@@ -40,6 +40,17 @@
                ReferencedContainer = "container:XcCopilot.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B26B38C42C6C6855007DBBCE"
+               BuildableName = "XcCopilotUITests.xctest"
+               BlueprintName = "XcCopilotUITests"
+               ReferencedContainer = "container:XcCopilot.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

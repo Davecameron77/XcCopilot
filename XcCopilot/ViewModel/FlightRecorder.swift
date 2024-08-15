@@ -17,18 +17,38 @@ actor FlightRecorder {
     
     var flight: Flight?
     static var flightDate: Date = Date.now
-    let container: NSPersistentContainer
-    let context: NSManagedObjectContext
     
-    init() {
-        container = NSPersistentContainer(name: "XCCopilot")
-        container.loadPersistentStores { storeDescription, error in
-            if let error = error as NSError? {
-                fatalError("Core Data error: \(error)")
+    private static var container: NSPersistentContainer = {
+        let container = NSPersistentContainer(name: "XCCopilot")
+        container.loadPersistentStores { description, error in
+            if let error = error {
+                fatalError("Unable to load persistent stores: \(error)")
             }
         }
-        context = container.viewContext
+        return container
+    }()
+        
+//    private static var context: NSManagedObjectContext {
+//        return Self.container.viewContext
+//    }
+    
+    let context: NSManagedObjectContext
+    init() {
+        context = NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
     }
+    
+//    let container: NSPersistentContainer
+//    let context: NSManagedObjectContext
+//    
+//    init() {
+//        container = NSPersistentContainer(name: "XCCopilot")
+//        container.loadPersistentStores { storeDescription, error in
+//            if let error = error as NSError? {
+//                fatalError("Core Data error: \(error)")
+//            }
+//        }
+//        context = container.viewContext
+//    }
 
     ///
     /// Enables takeoff detection and passes a reference of the flight to record
@@ -161,7 +181,7 @@ extension FlightRecorder {
     private func createFlightWithTitle(_ title: String = "Unknown Flight") throws -> Flight {
         let flight = Flight(context: context)
         flight.id = UUID()
-        flight.igcID = flight.id?.uuidString
+        flight.igcID = flight.id!.uuidString
         flight.title = title
         
         context.insert(flight)
@@ -208,6 +228,17 @@ extension FlightRecorder {
     func deleteFlight(_ flight: Flight) throws {
         context.delete(flight)
         try context.save()
+    }
+    
+    func deleteAllFlights() throws {
+        
+        do {
+            for flight in try getFlights() {
+                try deleteFlight(flight)
+            }
+        } catch {
+            print("Error deleting all flights")
+        }
     }
     
     ///
@@ -352,7 +383,9 @@ extension FlightRecorder {
             #endif
             
         } catch {
-            try deleteFlight(flight!)
+            if flight != nil {
+                try deleteFlight(flight!)
+            }
             print("Import Error: \(error)")
             throw error
         }

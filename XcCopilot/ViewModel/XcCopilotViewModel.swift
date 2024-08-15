@@ -68,6 +68,10 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
             distance: 500
         )
     )
+    @Published var glideRange = 0.0
+    
+    // Logbook
+    @Published var flightsInLogbook: [Flight] = []
     
     // Settings
     /// True in case user has audio selected active
@@ -195,6 +199,9 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         Task {
             do {
                 try await flightRecorder.endFlight(withWeather: currentWeather)
+                await MainActor.run {
+                    flightTime = .zero
+                }
             } catch {
                 showAlert(withText: error.localizedDescription)
                 logger?.debug("\(error.localizedDescription)")
@@ -206,10 +213,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     /// Updates VM flight vars for display in the GUI
     ///
     func updateFlightVars() {
-        @MainActor
-        Task {
-            
-        }
+        
         verticalSpeedMps = flightComputer.verticalVelocityMps
         verticalAccelerationMetresPerSecondSquared = flightComputer.verticalAccelerationMps2
         glideRangeInMetres = flightComputer.glideRangeInMetres
@@ -239,6 +243,11 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
             flightTime = Duration.seconds(flightComputer.flightTime)
             
             playVarioSound()
+        }
+        
+        // Detect a landing
+        if flightState == .inFlight && gpsSpeed < 1.0 && calculatedElevation < 10.0 {
+            stopFlying()
         }
     }
     
@@ -312,7 +321,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     func logFlightFrame() {
         // Log flight
         if flightComputer.inFlight {
-            Task {
+            Task(priority: .medium) {
                 do {
                     try await flightRecorder.storeActiveFrame(
                         acceleration: flightComputer.acceleration,
@@ -335,9 +344,10 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     /// - Parameter forUrl: The file to import
     func importIgcFile(forUrl url: URL) async -> Bool {
-        let task = Task {
+        let task = Task(priority: .background) {
             do {
                 try await flightRecorder.importFlight(forUrl: url)
+                showAlert(withText: "Flight imported")
                 return true
             } catch {
                 logger?.debug("\(error.localizedDescription)")
@@ -345,6 +355,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
             }
             return false
         }
+        
         return await task.result.get()
     }
     
@@ -353,13 +364,17 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     /// - Parameter flight: The flight to export
     func exportIgcFile(flight: Flight) async -> IgcFile? {
-        do {
-            return try await flightRecorder.exportFlight(flightToExport: flight)
-        } catch {
-            logger?.debug("\(error.localizedDescription)")
-            showAlert(withText: "Failed to export flight")
+        let task = Task(priority: .background) {
+            do {
+                return try await flightRecorder.exportFlight(flightToExport: flight)
+            } catch {
+                logger?.debug("\(error.localizedDescription)")
+                showAlert(withText: "Failed to export flight")
+            }
+            return nil
         }
-        return nil
+        
+        return await task.result.get()
     }
     
     ///
@@ -443,6 +458,32 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         
         return nil
     }
+    
+    ///
+    /// Calculates the glide range to display on the map according to map scale
+    ///
+    /// - Parameter forContext: The map to measure from
+    /// - Parameter withGeometry: The screen geometry to use
+    func calculateGlideRangeToDisplay(forContext context: MapCameraUpdateContext,
+                                      withGeometry geometry: GeometryProxy) {
+        
+        let center = context.camera.centerCoordinate
+        let span = context.region.span
+        
+        // Top reference of map
+        let loc1 = CLLocation(latitude: center.latitude - span.latitudeDelta * 0.5,
+                              longitude: center.longitude)
+        // Bottom reference of map
+        let loc2 = CLLocation(latitude: center.latitude + span.latitudeDelta * 0.5,
+                              longitude: center.longitude)
+        // Map height in Meters
+        let screenHeightMeters = Measurement(value: loc1.distance(from: loc2),
+                                             unit: UnitLength.meters).value
+        
+        let pxPerMeter = geometry.size.height / screenHeightMeters
+        glideRange = glideRangeInMetres * pxPerMeter
+    }
+    
 }
 
 ///
@@ -464,6 +505,7 @@ extension XcCopilotViewModel {
         
     }
     
+    ///
     /// Converts a speed from standard m/s to the configured speed unit
     ///
     /// - Parameter speedMetresSecond: The input speed to convert
@@ -483,6 +525,7 @@ extension XcCopilotViewModel {
         }
     }
     
+    ///
     /// Converts an elevation from standard metres to the configured elevation unit
     ///
     /// - Parameter elevationMetres: The input elevation to convert
@@ -498,6 +541,7 @@ extension XcCopilotViewModel {
         }
     }
     
+    ///
     /// Converts a temperature from the default unit to the configured temperature unit
     ///
     /// - Parameter temperature: The input temperature to convert
@@ -509,4 +553,5 @@ extension XcCopilotViewModel {
             return temperature.converted(to: .fahrenheit)
         }
     }
+
 }

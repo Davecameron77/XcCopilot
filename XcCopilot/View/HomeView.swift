@@ -22,7 +22,7 @@ struct HomeView: View {
             InstrumentView()
                 .environmentObject(vm)
                 .tabItem {
-                    Label("Instrumenrts", systemImage: "gauge")
+                    Label("Instruments", systemImage: "gauge")
                 }
                 .tag("instruments")
 

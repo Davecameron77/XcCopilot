@@ -22,6 +22,11 @@ class FlightComputer: NSObject,
     /// Init a FlightComputer and try to start all available services
     ///
     override init() {
+        f_k_stateTransitionModel = Matrix(grid: [1.0, t, 0.5 * t * t,
+                                                 0.0, 1.0, t,
+                                                 0.0, 0.0, 1.0], rows: 3, columns: 3)
+        kalmanFilter = KalmanFilter(stateEstimatePrior: x, errorCovariancePrior: errorCovariancePrior)
+        
         super.init()
         manager.delegate = self
         startBaroUpdates()
@@ -66,8 +71,8 @@ class FlightComputer: NSObject,
     var pitchInDegrees = 0.0
     var rollInDegrees = 0.0
     var yawInDegrees = 0.0
-    var acceleration: CMAcceleration = .init(x: 0, y: 0, z: 0)
-    var gravity: CMAcceleration = .init(x: 0, y: 0, z: 0)
+    var acceleration: CMAcceleration = .init()
+    var gravity: CMAcceleration = .init()
     
     // Baro/Altitude/Elevation
     var baroAltitude = 0.0
@@ -81,7 +86,7 @@ class FlightComputer: NSObject,
         if gpsSpeed < 1.5 {
             return 0.0
         }
-        
+#warning("Fix this")
         let ratio = abs((gpsSpeed / verticalVelocityMps).rounded(toPlaces: 1))
         
         return ratio > 0 ? ratio : Double.infinity
@@ -97,10 +102,32 @@ class FlightComputer: NSObject,
     private var baroAltitudeHistory: [Double] = []
     private var zHistory: [[Double]] = []
     private var verticalVelocityHistory: [Double] = []
-    private let MAX_BARO_HISTORY  = 12
+    private let MAX_BARO_HISTORY  = 3
     private let MAX_ACCEL_HISTORY  = 400
     private var lastElevationUpdate = Date.distantPast
     private let SECONDS_BETWEEN_ELEVATION_UPDATES = 10
+    
+    // Kalman filter
+    // Initial state vector (Alt, VS, VA)
+    let x = Matrix(vector: [0.0, 0.0, 0.0])
+    let t = 1.0
+    // Altitude/VS uncertain, acceleration is not
+    let errorCovariancePrior = Matrix(grid: [10.0, 0.0, 0.0,
+                                             0.0, 10.0, 0.0,
+                                             0.0, 0.0, 1.0], rows: 3, columns: 3)
+    // Set at init
+    var f_k_stateTransitionModel: Matrix
+    // Fixed to measurements
+    let h_k_observationModel = Matrix(grid: [1.0, 0.0, 0.0,
+                                             0.0, 1.0, 0.0,
+                                             0.0, 0.0, 1.0], rows: 3, columns: 3)
+    // Not used
+    let b_k_controlInputModel = Matrix(squareOfSize: 3)
+    // Not used
+    let u_k_controlVector = Matrix(vectorOf: 3)
+    var q_k_processNoiseCovariance = Matrix(identityOfSize: 3) * 1e-2
+    var r_k_measurementNoiseCovariance = Matrix(identityOfSize: 3) * 1e-2
+    var kalmanFilter: KalmanFilter<Matrix>
     
     // Services
     private let manager = CLLocationManager()
@@ -155,7 +182,7 @@ class FlightComputer: NSObject,
     /// Calculates VerticalVelocity based on given accelerometer/baro history
     /// Also attempts to identify the DMS of any thermals
     ///
-    private func calculateVerticalVelocity() {
+    func calculateVerticalVelocity() {
         
         guard !zHistory.isEmpty else {
             verticalVelocityMps = 0.0
@@ -167,82 +194,56 @@ class FlightComputer: NSObject,
         verticalVelocityMps = baroAltitudeHistory.simpleMovingAverage()
         
         // 2 - Kalman Filter
-        
-        // Initial state vector (Alt, VS, VA)
-        let x = Matrix(vector: [0.0, 0.0, 0.0])
-        let initialCovariance = Matrix(grid: [1000.0, 0.0, 0.0,
-                                              0.0, 1000.0, 0.0,
-                                              0.0, 0.0, 1000.0], rows: 3, columns: 3)
-
-        let stateTransitionModel = Matrix(grid: [1.0, 1.0, 0.5,
-                                                 0.0, 1.0, 1.0,
-                                                 0.0, 0.0, 1.0], rows: 3, columns: 3)
-
-        let observationModel = Matrix(grid: [1.0, 0.0, 0.0,
-                                             0.0, 1.0, 0.0,
-                                             0.0, 0.0, 1.0], rows: 3, columns: 3)
-
-        let controlInputModel = Matrix(squareOfSize: 3)
-        let controlVector = Matrix(vectorOf: 3)
-        let processNoiseCovariance = Matrix(identityOfSize: 3) * 1e-5
-        let measurementNoiseCovariance = Matrix(identityOfSize: 3) * 1e-2
-        
-        var kalmanFilter = KalmanFilter(stateEstimatePrior: x, errorCovariancePrior: initialCovariance)
-        
-        for measurement in zHistory.reversed() {
+        if let measurement = zHistory.last  {
             
             // Measurement
             let z = Matrix(vector: [measurement[0], measurement[1], measurement[2]])
             
             kalmanFilter = kalmanFilter.predict(
-                stateTransitionModel: stateTransitionModel,
-                controlInputModel: controlInputModel,
-                controlVector: controlVector,
-                covarianceOfProcessNoise: processNoiseCovariance
+                stateTransitionModel: f_k_stateTransitionModel,
+                controlInputModel: b_k_controlInputModel,
+                controlVector: u_k_controlVector,
+                covarianceOfProcessNoise: q_k_processNoiseCovariance
             )
+            
             kalmanFilter = kalmanFilter.update(
                 measurement: z,
-                observationModel: observationModel,
-                covarienceOfObservationNoise: measurementNoiseCovariance
+                observationModel: h_k_observationModel,
+                covarienceOfObservationNoise: r_k_measurementNoiseCovariance
             )
         }
-                
+        
         let predictedAltitude = kalmanFilter.stateEstimatePrior[0, 0]
-//        let predictedVerticalVelocity = kalmanFilter.stateEstimatePrior[1, 0]
         
         // 3 - Gain - If filter lags or leads race to catch up
         
-        var delta = 0.0
+        var delta = 1.0
         let GAIN = 0.2
         
-        if predictedAltitude < baroAltitude * 0.85 && verticalAccelerationMps2 > 0.25 {
-            // filter is lagging
-            delta *= (1 + GAIN)
-        } else if predictedAltitude > baroAltitude * 0.85 {
-            // filter is leading
-            delta *= (1 - GAIN)
+        // Fitler is close, use it
+        if predictedAltitude > 0.8 * baroAltitude && predictedAltitude < 1.2 * baroAltitude {
+            if predictedAltitude < baroAltitude * 0.85 {
+                // filter is lagging
+                delta *= (1 + GAIN)
+            } else if predictedAltitude > baroAltitude * 0.85 {
+                // filter is leading
+                delta *= (1 - GAIN)
+            }
         }
         
         verticalVelocityMps *= delta
-
-        // Assignment / maintenance
+        
+        // 4 - Assignment / maintenance
         verticalVelocityHistory.append(verticalVelocityMps)
         
         // Don't pass back insignifigant values
-        verticalVelocityMps = verticalVelocityMps < 0.1 ? 0 : verticalVelocityMps
-                
+        verticalVelocityMps = abs(verticalVelocityMps) < 0.1 ? 0 : verticalVelocityMps
+        
         // Cleanup
         if verticalVelocityHistory.count > MAX_BARO_HISTORY {
             let recordsToRemove = self.verticalVelocityHistory.count - self.MAX_BARO_HISTORY
             for i in 0 ..< recordsToRemove {
                 self.verticalVelocityHistory.remove(at: i)
-            }
-        }
-        
-        if zHistory.count > MAX_BARO_HISTORY {
-            let recordsToRemove = self.zHistory.count - self.MAX_BARO_HISTORY
-            for i in 0 ..< recordsToRemove {
-                self.zHistory.remove(at: i)
             }
         }
         
@@ -256,7 +257,7 @@ class FlightComputer: NSObject,
     ///
     /// Calculates the current elevation based on lat/long and altitude
     ///
-    private func calculateElevation() async {
+    func calculateElevation() async {
         if currentCoords.latitude == 0  || currentCoords.longitude == 0 {
             return
         }
@@ -406,21 +407,17 @@ extension FlightComputer {
     /// Starts CoreMotion Services
     ///
     private func startCoreMotionUpdates() {
-        motionManager.startDeviceMotionUpdates(to: refreshQueue) {
-            data,
-            error in
+        motionManager.startDeviceMotionUpdates(to: refreshQueue) { data, error in
             if data != nil {
                 self.motionAvailable = true
                 
-                Task(priority: .userInitiated) {
-                    // Convert from radians to degrees
-                    self.pitchInDegrees = data!.attitude.pitch * 57.2958
-                    self.rollInDegrees = data!.attitude.roll * 57.2958
-                    self.yawInDegrees = data!.attitude.yaw * 57.2958
-                    
-                    self.acceleration = data!.userAcceleration
-                    self.gravity = data!.gravity
-                }
+                // Convert from radians to degrees
+                self.pitchInDegrees = data!.attitude.pitch * 57.2958
+                self.rollInDegrees = data!.attitude.roll * 57.2958
+                self.yawInDegrees = data!.attitude.yaw * 57.2958
+                
+                self.acceleration = data!.userAcceleration
+                self.gravity = data!.gravity
                 
             } else {
                 self.motionAvailable = false
@@ -464,24 +461,23 @@ extension FlightComputer {
                 
                 self.altAvailable = true
                 
-                Task(priority: .userInitiated) {
-                    
-                    let df = DateFormatter()
-                    df.dateFormat = "y-MM-dd H:mm:ss.SSSS"
-                    self.baroAltitude = data!.altitude
-                    self.baroAltitudeHistory.append(data!.altitude.rounded(toPlaces: 3))
-                    
-                    // Truncate altitude history to last 12 frames for vertical speed calcs
-                    // Barometer samples at 6 hz, with an average trim speed of 30 km/h
-                    // or 8.3 m/s, yields an average sample of 16.6m travelled
-                    if self.baroAltitudeHistory.count >= self.MAX_BARO_HISTORY {
-                        let recordsToRemove = self.baroAltitudeHistory.count - self.MAX_BARO_HISTORY
-                        for i in 0 ..< recordsToRemove {
-                            self.baroAltitudeHistory.remove(at: i)
-                        }
+                let df = DateFormatter()
+                df.dateFormat = "y-MM-dd H:mm:ss.SSSS"
+                self.baroAltitude = data!.altitude
+                self.baroAltitudeHistory.append(data!.altitude.rounded(toPlaces: 3))
+                
+                // Truncate altitude history to last 12 frames for vertical speed calcs
+                // Barometer samples at 6 hz, with an average trim speed of 30 km/h
+                // or 8.3 m/s, yields an average sample of 16.6m travelled
+                if self.baroAltitudeHistory.count >= self.MAX_BARO_HISTORY {
+                    let recordsToRemove = self.baroAltitudeHistory.count - self.MAX_BARO_HISTORY
+                    for i in 0 ..< recordsToRemove {
+                        self.baroAltitudeHistory.remove(at: i)
                     }
-                    
-                    // Params for Kalman filter
+                }
+                
+                // Params for Kalman filter
+                Task(priority: .high) {
                     let zAccel = self.calculateAbsoluteZAcceleration(
                         forGravity: self.gravity,
                         forAcceleration: self.acceleration
@@ -492,15 +488,28 @@ extension FlightComputer {
                     
                     self.zHistory.append([altitude, verticalVelocity, zAccel])
                     
-                    // Calculate vertical speed on every baro update, 6 hz
+                    // Cleanup
+                    if self.zHistory.count > self.MAX_BARO_HISTORY {
+                        let recordsToRemove = self.zHistory.count - self.MAX_BARO_HISTORY
+                        for i in 0 ..< recordsToRemove {
+                            self.zHistory.remove(at: i)
+                        }
+                    }
+                }
+                
+                // Calculate vertical speed on every baro update, 6 hz
+                Task(priority: .high) {
                     self.calculateVerticalVelocity()
-                    
-                    // Update elevation if last update is long enough ago
+                }
+                
+                
+                // Update elevation if last update is long enough ago
+                Task(priority: .high) {
                     if Date.now - self.lastElevationUpdate > TimeInterval(self.SECONDS_BETWEEN_ELEVATION_UPDATES) {
                         await self.calculateElevation()
                     }
-                    
                 }
+                
             } else {
                 self.altAvailable = false
             }

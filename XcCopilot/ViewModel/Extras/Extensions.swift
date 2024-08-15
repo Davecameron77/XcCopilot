@@ -151,11 +151,11 @@ extension Array where Element: BinaryFloatingPoint {
         let size = self.count
         var sum = 0.0
         
-        for i in 0..<self.count-1 {
+        for i in 0 ..< self.count - 1 {
             sum += self[i+1] - self[i]
         }
         
-        let result = sum / Double(size)
+        let result = sum / Double(size - 2)
                 
         return result.isNaN ? 0.0 : result
     }
@@ -230,6 +230,13 @@ extension TimeInterval {
     }
     var millisecond: Int {
         Int((self*1000).truncatingRemainder(dividingBy: 1000))
+    }
+}
+
+extension Task where Success == Never, Failure == Never {
+    static func sleep(seconds: Double) async throws {
+        let duration = UInt64(seconds * 1_000_000_000)
+        try await Task.sleep(nanoseconds: duration)
     }
 }
 

@@ -49,6 +49,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		B26B38CB2C6C6855007DBBCE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B2A117D32B1EC4B4003447E2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B2A117DA2B1EC4B4003447E2;
+			remoteInfo = XcCopilot;
+		};
 		B28CA58F2C631A2500272D3A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = B2A117D32B1EC4B4003447E2 /* Project object */;
@@ -68,6 +75,7 @@
 		B25144652B40F57C00364C7F /* FlightRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightRecorder.swift; sourceTree = "<group>"; };
 		B254411F2B58DE4B00C476EF /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
 		B26756362C1E7CBD006C2362 /* Fragments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fragments.swift; sourceTree = "<group>"; };
+		B26B38C52C6C6855007DBBCE /* XcCopilotUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = XcCopilotUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B26F8BF32C28D39300F3699F /* KalmanFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KalmanFilter.swift; sourceTree = "<group>"; };
 		B27A785B2C1FD74D001CE7E1 /* 2hz_ascend.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = 2hz_ascend.mp3; sourceTree = "<group>"; };
 		B27A785C2C1FD74D001CE7E1 /* 2hz_descend.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = 2hz_descend.mp3; sourceTree = "<group>"; };
@@ -105,10 +113,18 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		B26B38C62C6C6855007DBBCE /* XcCopilotUITests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = XcCopilotUITests; sourceTree = "<group>"; };
 		B28CA58C2C631A2500272D3A /* XcCopilotTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = XcCopilotTests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		B26B38C22C6C6855007DBBCE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B28CA5882C631A2500272D3A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -139,6 +155,7 @@
 			children = (
 				B2A117DD2B1EC4B4003447E2 /* XcCopilot */,
 				B28CA58C2C631A2500272D3A /* XcCopilotTests */,
+				B26B38C62C6C6855007DBBCE /* XcCopilotUITests */,
 				B2A117DC2B1EC4B4003447E2 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -148,6 +165,7 @@
 			children = (
 				B2A117DB2B1EC4B4003447E2 /* XcCopilot.app */,
 				B28CA58B2C631A2500272D3A /* XcCopilotTests.xctest */,
+				B26B38C52C6C6855007DBBCE /* XcCopilotUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -275,6 +293,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		B26B38C42C6C6855007DBBCE /* XcCopilotUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B26B38CD2C6C6855007DBBCE /* Build configuration list for PBXNativeTarget "XcCopilotUITests" */;
+			buildPhases = (
+				B26B38C12C6C6855007DBBCE /* Sources */,
+				B26B38C22C6C6855007DBBCE /* Frameworks */,
+				B26B38C32C6C6855007DBBCE /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B26B38CC2C6C6855007DBBCE /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B26B38C62C6C6855007DBBCE /* XcCopilotUITests */,
+			);
+			name = XcCopilotUITests;
+			packageProductDependencies = (
+			);
+			productName = XcCopilotUITests;
+			productReference = B26B38C52C6C6855007DBBCE /* XcCopilotUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		B28CA58A2C631A2500272D3A /* XcCopilotTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = B28CA5912C631A2500272D3A /* Build configuration list for PBXNativeTarget "XcCopilotTests" */;
@@ -327,6 +368,10 @@
 				LastSwiftUpdateCheck = 1600;
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
+					B26B38C42C6C6855007DBBCE = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = B2A117DA2B1EC4B4003447E2;
+					};
 					B28CA58A2C631A2500272D3A = {
 						CreatedOnToolsVersion = 16.0;
 						TestTargetID = B2A117DA2B1EC4B4003447E2;
@@ -354,11 +399,19 @@
 			targets = (
 				B2A117DA2B1EC4B4003447E2 /* XcCopilot */,
 				B28CA58A2C631A2500272D3A /* XcCopilotTests */,
+				B26B38C42C6C6855007DBBCE /* XcCopilotUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		B26B38C32C6C6855007DBBCE /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B28CA5892C631A2500272D3A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -385,6 +438,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		B26B38C12C6C6855007DBBCE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B28CA5872C631A2500272D3A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -432,6 +492,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		B26B38CC2C6C6855007DBBCE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B2A117DA2B1EC4B4003447E2 /* XcCopilot */;
+			targetProxy = B26B38CB2C6C6855007DBBCE /* PBXContainerItemProxy */;
+		};
 		B28CA5902C631A2500272D3A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = B2A117DA2B1EC4B4003447E2 /* XcCopilot */;
@@ -440,6 +505,50 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		B26B38CE2C6C6855007DBBCE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BUQJDJ567T;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ca.tinyweb.XcCopilotUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = XcCopilot;
+			};
+			name = Debug;
+		};
+		B26B38CF2C6C6855007DBBCE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BUQJDJ567T;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ca.tinyweb.XcCopilotUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = XcCopilot;
+			};
+			name = Release;
+		};
 		B28CA5922C631A2500272D3A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -697,6 +806,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		B26B38CD2C6C6855007DBBCE /* Build configuration list for PBXNativeTarget "XcCopilotUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B26B38CE2C6C6855007DBBCE /* Debug */,
+				B26B38CF2C6C6855007DBBCE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		B28CA5912C631A2500272D3A /* Build configuration list for PBXNativeTarget "XcCopilotTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

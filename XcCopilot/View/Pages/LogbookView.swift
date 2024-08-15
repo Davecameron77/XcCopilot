@@ -78,9 +78,7 @@ extension LogbookView {
             }
         }
     }
-}
-
-extension LogbookView {
+    
     func importFlight(forUrl url: URL) async {
         Task(priority: .medium) {
             if url.startAccessingSecurityScopedResource() {

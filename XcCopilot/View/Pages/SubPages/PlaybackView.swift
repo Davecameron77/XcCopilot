@@ -25,22 +25,8 @@ struct PlaybackView: View {
     
     var nodes: [HashableNode]
         
-    private var printedElapsedTime: String {
-        let hours = Int(elapsedTimeInSeconds) / 3600
-        let minutes = (Int(elapsedTimeInSeconds) % 3600) / 60
-        let seconds = Int(elapsedTimeInSeconds) % 60
-
-        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
-    }
-    
-    private var printedTimeRemaining: String {
-        let timeRemainingInSeconds = totalTimeInSeconds - elapsedTimeInSeconds
-        let hours = Int(timeRemainingInSeconds) / 3600
-        let minutes = (Int(timeRemainingInSeconds) % 3600) / 60
-        let seconds = Int(timeRemainingInSeconds) % 60
-
-        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
-    }
+    @State private var printedElapsedTime = ""
+    @State private var printedTimeRemaining = ""
     
     var body: some View {
                        
@@ -53,6 +39,9 @@ struct PlaybackView: View {
                             
                             Text(printedElapsedTime)
                             Slider(value: $pathIndex, in: 0...Double(nodes.count))
+                                .onChange(of: pathIndex) { oldValue, newValue in
+                                    updateTimings(newValue)
+                                }
                             Text(printedTimeRemaining)
                         }
                         HStack {
@@ -181,6 +170,10 @@ struct PlaybackView: View {
         }
         .onReceive(timer) { input in
             if playing {
+                if elapsedTimeInSeconds == totalTimeInSeconds {
+                    return
+                }
+                
                 pathIndex += 1
                 elapsedTimeInSeconds += 1
                 
@@ -202,6 +195,8 @@ struct PlaybackView: View {
 // Functions
 extension PlaybackView {
     private func setup() {
+        updateTimings(0)
+        
         let maxLatitude  = self.nodes.max { a, b in a.latitude < b.latitude }?.latitude ?? 0.0
         let minLatitude  = self.nodes.min { a, b in a.latitude < b.latitude }?.latitude ?? 0.0
         let maxLongitude = self.nodes.max { a, b in a.longitude < b.longitude }?.longitude ?? 0.0
@@ -239,5 +234,26 @@ extension PlaybackView {
     
     private func coordinateFromNode(_ node: HashableNode) -> CLLocationCoordinate2D {
         return CLLocationCoordinate2D(latitude: node.latitude, longitude: node.longitude)
+    }
+    
+    private func updateTimings(_ newValue: Double) {
+
+        pathIndex = newValue
+        elapsedTimeInSeconds = newValue
+        
+        let timeRemainingInSeconds = totalTimeInSeconds - elapsedTimeInSeconds
+        
+        let hoursElapsed = Int(elapsedTimeInSeconds) / 3600
+        let minutesElapsed = (Int(elapsedTimeInSeconds) % 3600) / 60
+        let secondsElapsed = Int(elapsedTimeInSeconds) % 60
+        
+        let hoursRemaining = Int(timeRemainingInSeconds) / 3600
+        let minutesRemaining = (Int(timeRemainingInSeconds) % 3600) / 60
+        let secondsRemaining = Int(timeRemainingInSeconds) % 60
+
+        withAnimation {
+            printedElapsedTime = String(format: "%02d:%02d:%02d", hoursElapsed, minutesElapsed, secondsElapsed)
+            printedTimeRemaining = String(format: "%02d:%02d:%02d", hoursRemaining, minutesRemaining, secondsRemaining)
+        }
     }
 }
