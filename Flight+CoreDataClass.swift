@@ -2,7 +2,7 @@
 //  Flight+CoreDataClass.swift
 //  XcCopilot
 //
-//  Created by Dave Cameron on 2024-07-20.
+//  Created by Dave Cameron on 2024-08-16.
 //
 //
 
