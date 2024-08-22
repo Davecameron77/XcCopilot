@@ -9,14 +9,13 @@ import MapKit
 
 class FlightAnalyzer: FlightAnalyzerService {
     
-    var results: DmsQuadtree?
-    let TREE_CAPACITY = 20
+    private let TREE_CAPACITY = 20
     
     func analyzeStoredFlights(_ flights: [Flight], aroundCoords coords: CLLocationCoordinate2D, withinSpan span: MKCoordinateSpan) throws -> DmsQuadtree {
         
         guard !flights.isEmpty else { throw FlightAnalyzerError.noDataProvided("No flights to analyze") }
         let region = MKCoordinateRegion(center: coords, span: span)
-        results = DmsQuadtree(region: MyCoordinateRegion(region: region, count: 0), capacity: TREE_CAPACITY)
+        let results = DmsQuadtree(region: MyCoordinateRegion(region: region, count: 0), capacity: TREE_CAPACITY)
                 
         for flight in flights {
             if let frames = flight.frames?.allObjects as? [FlightFrame] {
@@ -37,16 +36,16 @@ class FlightAnalyzer: FlightAnalyzerService {
                             verticalSpeed: frame.verticalSpeed != 0 ? frame.verticalSpeed : frame.derrivedVerticalSpeed
                         )
                         
-                        _ = results!.insert(node)
+                        _ = results.insert(node)
                     }
                 }
             }
         }
         
-        if results == nil {
+        if results.points.isEmpty && !results.divided {
             throw FlightAnalyzerError.noResultsFound("No results found")
         } else {
-            return results!
+            return results
         }
     }
 }

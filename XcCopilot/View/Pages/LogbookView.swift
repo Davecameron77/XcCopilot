@@ -57,9 +57,7 @@ struct LogbookView: View {
                           allowedContentTypes: [UTType.igcType, UTType.text, UTType.plainText, .item]) { result in
                 switch result {
                 case .success(let url):
-                    Task(priority: .medium) {
-                        await importFlight(forUrl: url)
-                    }
+                    importFlight(forUrl: url)
                 case .failure(let error):
                     vm.showAlert(withText: "Error importing flight: \(error)")
                 }
@@ -79,7 +77,7 @@ extension LogbookView {
         }
     }
     
-    func importFlight(forUrl url: URL) async {
+    func importFlight(forUrl url: URL) {
         Task(priority: .medium) {
             if url.startAccessingSecurityScopedResource() {
                 if await vm.importIgcFile(forUrl: url) {

@@ -22,6 +22,21 @@ final class GuiVmTests: XCTestCase {
         
     }
     
+    @MainActor
+    func testFlightState() {
+        
+        let app = XCUIApplication()
+        app.tabBars["Tab Bar"].buttons["Instruments"].tap()
+        let button = app.buttons["FlightStateButton"]
+        
+        XCTAssertEqual("Arm for Flight", button.label)
+        button.tap()
+        XCTAssertEqual("End Flight", button.label)
+        button.tap()
+        XCTAssertEqual("Arm for Flight", button.label)
+    }
+    
+    @MainActor
     func testLogBook() {
         
         let app = XCUIApplication()
@@ -40,10 +55,28 @@ final class GuiVmTests: XCTestCase {
         collectionViewsQuery/*@START_MENU_TOKEN@*/.sliders["5"]/*[[".cells.sliders[\"5\"]",".sliders[\"5\"]"],[[[-1,1],[-1,0]]],[0]]@END_MENU_TOKEN@*/.swipeLeft()
         app.navigationBars["Flight Profile"].buttons["Unknown Flight"].tap()
         
+        XCTAssertTrue(app.tabBars["Tab Bar"].exists)
     }
     
-    func testStartFlying() {
+    @MainActor
+    func testSettings() {
         
+        let app = XCUIApplication()
+        app.tabBars["Tab Bar"].buttons["Settings"].tap()
+        
+        let collectionViewsQuery = app.collectionViews
+        collectionViewsQuery.textFields["Pilot: "].clearText()
+        collectionViewsQuery/*@START_MENU_TOKEN@*/.textFields["Pilot: "]/*[[".cells.textFields[\"Pilot: \"]",".textFields[\"Pilot: \"]"],[[[-1,1],[-1,0]]],[0]]@END_MENU_TOKEN@*/.tap()
+        collectionViewsQuery/*@START_MENU_TOKEN@*/.textFields["Pilot: "]/*[[".cells.textFields[\"Pilot: \"]",".textFields[\"Pilot: \"]"],[[[-1,1],[-1,0]]],[0]]@END_MENU_TOKEN@*/.typeText("Jon Smith")
+        collectionViewsQuery/*@START_MENU_TOKEN@*/.textFields["Glider: "]/*[[".cells.textFields[\"Glider: \"]",".textFields[\"Glider: \"]"],[[[-1,1],[-1,0]]],[0]]@END_MENU_TOKEN@*/.clearText()
+        collectionViewsQuery/*@START_MENU_TOKEN@*/.textFields["Glider: "]/*[[".cells.textFields[\"Glider: \"]",".textFields[\"Glider: \"]"],[[[-1,1],[-1,0]]],[0]]@END_MENU_TOKEN@*/.tap()
+        collectionViewsQuery/*@START_MENU_TOKEN@*/.textFields["Glider: "]/*[[".cells.textFields[\"Glider: \"]",".textFields[\"Glider: \"]"],[[[-1,1],[-1,0]]],[0]]@END_MENU_TOKEN@*/.typeText("Ozone")
+        app.collectionViews/*@START_MENU_TOKEN@*/.textFields["Trim Speed (km/h): "]/*[[".cells.textFields[\"Trim Speed (km\/h): \"]",".textFields[\"Trim Speed (km\/h): \"]"],[[[-1,1],[-1,0]]],[0]]@END_MENU_TOKEN@*/.clearText()
+        app.collectionViews/*@START_MENU_TOKEN@*/.textFields["Trim Speed (km/h): "]/*[[".cells.textFields[\"Trim Speed (km\/h): \"]",".textFields[\"Trim Speed (km\/h): \"]"],[[[-1,1],[-1,0]]],[0]]@END_MENU_TOKEN@*/.tap()
+        app.collectionViews/*@START_MENU_TOKEN@*/.textFields["Trim Speed (km/h): "]/*[[".cells.textFields[\"Trim Speed (km\/h): \"]",".textFields[\"Trim Speed (km\/h): \"]"],[[[-1,1],[-1,0]]],[0]]@END_MENU_TOKEN@*/.typeText("31")
+        app.collectionViews/*@START_MENU_TOKEN@*/.sliders["volume"]/*[[".cells.sliders[\"volume\"]",".sliders[\"volume\"]"],[[[-1,1],[-1,0]]],[0]]@END_MENU_TOKEN@*/.swipeLeft()
+        
+        XCTAssertTrue(app.tabBars["Tab Bar"].exists)
     }
     
     @MainActor
@@ -54,5 +87,22 @@ final class GuiVmTests: XCTestCase {
                 XCUIApplication().launch()
             }
         }
+    }
+}
+
+extension XCUIElement {
+    /**
+     Removes any current text in the field before typing in the new value
+     - Parameter text: the text to enter into the field
+     */
+    func clearText() {
+        guard let stringValue = self.value as? String else {
+            XCTFail("Tried to clear and enter text into a non string value")
+            return
+        }
+        
+        self.tap()
+        let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: stringValue.count)
+        self.typeText(deleteString)
     }
 }

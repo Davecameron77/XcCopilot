@@ -26,7 +26,7 @@ class DmsQuadtree {
         self.divided = false
     }
     
-    func subdivide() {
+    private func subdivide() {
         let newLatSpan = myRegion.region.span.latitudeDelta * 0.5
         let newLongSpan = myRegion.region.span.longitudeDelta * 0.5
         

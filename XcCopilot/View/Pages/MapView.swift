@@ -20,9 +20,9 @@ struct MapView: View {
                     UserAnnotation(anchor: .center)
                     
                     // Glide range
-                    MapCircle(center: vm.gpsCoords, radius: CLLocationDistance(vm.glideRange))
+                    MapCircle(center: vm.gpsCoords, radius: CLLocationDistance(vm.glideRangeInPixels))
                         .stroke(lineWidth: 10)
-                        .foregroundStyle(.blue.opacity(0.5))
+                        .foregroundStyle(.blue.opacity(0.35))
                 }
                 .mapStyle(.hybrid(elevation: .realistic))
                 .mapControls {

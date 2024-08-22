@@ -38,6 +38,7 @@ struct InstrumentView: View {
                 .padding(.vertical, 10)
                 .tint(vm.flightComputer.inFlight ? .red : .green)
                 .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("FlightStateButton")
                 
                 ScrollView {
                     VStack {
@@ -46,10 +47,10 @@ struct InstrumentView: View {
                         HStack {
                             InstrumentBox(label: "Flight Time", value: vm.flightTime.formatted())
                             Divider()
-                            InstrumentBox(
-                                label: "Glide Ratio", 
-                                value: String(vm.glideRatio) + " / 1",
-                                unit: ""
+                            WindBox(
+                                direction: String(format: "%.1f", vm.windSpeed),
+                                velocity: String(format: "%.1f", vm.windDirection),
+                                unit: vm.speedUnit.rawValue
                             )
                         }
                         
@@ -64,7 +65,7 @@ struct InstrumentView: View {
                             Divider()
                             InstrumentBox(
                                 label: "Vertical Accel",
-                                value: String(format: "%.2f", vm.verticalAccelerationMetresPerSecondSquared),
+                                value: String(format: "%.2f", vm.verticalAccelerationMps2),
                                 unit: "m/s²"
                             )
                         }

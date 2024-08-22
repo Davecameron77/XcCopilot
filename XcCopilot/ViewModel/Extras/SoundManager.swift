@@ -32,7 +32,6 @@ class SoundManager {
     
     func playTone(forFrequency frequency: tone_frequencies) {
         DispatchQueue.global(qos: .userInteractive).async {
-            print("\(frequency.rawValue).mp3")
             guard let url = Bundle.main.url(forResource: frequency.rawValue, withExtension: "mp3") else { return }
             self.player = try? AVAudioPlayer(contentsOf: url)
             self.player?.play()

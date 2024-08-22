@@ -39,7 +39,6 @@ struct WeatherView: View {
     }
 }
 
-
 struct NearestThermalView: View {
     var direction: Double = 0
     var distance: Double = 0
@@ -61,7 +60,6 @@ struct NearestThermalView: View {
                 .padding(3)
             }
         }
-        
     }
 }
 
@@ -121,20 +119,39 @@ struct InstrumentBox<T: StringProtocol>: View {
     }
 }
 
-struct InstrumentRow<T: StringProtocol>: View {
-    var label: String = "Measurement: "
-    var value: T
+struct WindBox: View {
+    var direction: String
+    var velocity: String
     var unit: String?
     
     var body: some View {
-        HStack {
-            Text(label)
-            Spacer()
-            Text(value)
-            Text(unit ?? "")
+        if Double(velocity) ?? 0.0 > 0.0  && Double(velocity) ?? 0.0 < 25.0 {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Wind:")
+                    .font(.title2)
+                    .padding(5)
+                HStack {
+                    Image(systemName: "arrowshape.up.fill")
+                        .resizable()
+                        .frame(width: 15, height: 30)
+                        .rotationEffect(Angle(degrees: Double(direction) ?? 0.0))
+                }
+                .frame(maxWidth: .infinity, maxHeight: 40, alignment: .center)
+                Spacer()
+                HStack {
+                    Text("\(direction)°")
+                        .font(.system(size: 18))
+                    Text("at \(velocity) \(unit ?? "m/s")")
+                        .font(.system(size: 18))
+                }
+                .padding(.bottom, 10)
+            }
+            .frame(width: 185, height: 90)
+        } else {
+            Text("N/A")
+                .font(.title)
+                .frame(width: 185, height: 80)
         }
-        .padding(.vertical, 3)
-        .font(.title2)
     }
 }
 

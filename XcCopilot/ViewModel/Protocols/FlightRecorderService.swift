@@ -24,7 +24,7 @@ protocol FlightRecorderService {
         baroAltitude: Double,
         verticalVelocity: Double
     ) throws
-    func endFlight(withWeather weather: Weather?) throws
+    func endFlight(withWeather weather: Weather?, pilot pilotName: String, glider gliderName: String) throws
     func getFlights() throws -> [Flight]
     func getFrames(forFlight flight: Flight) throws -> [FlightFrame]
     func updateFlightTitle(forFlight flight: Flight, withTitle title: String) throws

@@ -174,7 +174,7 @@ extension Array where Element: BinaryFloatingPoint {
             if ascending && self[index] < 0.0 { break }
             if !ascending && self[index] > 0.0 { break }
             
-            sum += self[index-1] + self[index]
+            sum += self[index] - self[index-1]
         }
         
         return sum / Double(size)
@@ -182,6 +182,9 @@ extension Array where Element: BinaryFloatingPoint {
 }
 
 extension String {
+    ///
+    /// Utility function to extract part of a string
+    ///
     func subString(from: Int, to: Int) -> String {
        let startIndex = self.index(self.startIndex, offsetBy: from)
        let endIndex = self.index(self.startIndex, offsetBy: to)
@@ -189,19 +192,34 @@ extension String {
         return String(self[startIndex..<endIndex])
     }
     
+    ///
+    /// Utility function to add a line break when constructing a text file
+    ///
     mutating func addNewLine() {
         self.write("\r\n")
     }
 }
 
 extension Double {
+    ///
+    /// Utility function to easily round a double
+    ///
+    /// - Parameter toPlaces: The number of places to round
+    /// - Returns: The rounded double
     func rounded(toPlaces places:Int) -> Double {
         let divisor = pow(10.0, Double(places))
         return (self * divisor).rounded() / divisor
     }
     
+    ///
+    /// Utility function to convert compass degrees to radians
+    ///
     var degreesToRadians: Double { self * .pi / 180 }
     
+    ///
+    /// Converts a degree measurement into degree, minute, second
+    ///
+    /// - Returns a struct of (Degree, Minute, Second)
     func toDegreesMinutesSeconds() -> (Int, Int, Int) {
         let degrees = Int(self)
         let fractionalDegrees = abs(self - Double(degrees))
@@ -233,6 +251,9 @@ extension TimeInterval {
     }
 }
 
+///
+/// Utility method to put a task to sleep, for testing
+///
 extension Task where Success == Never, Failure == Never {
     static func sleep(seconds: Double) async throws {
         let duration = UInt64(seconds * 1_000_000_000)
@@ -240,6 +261,9 @@ extension Task where Success == Never, Failure == Never {
     }
 }
 
+///
+/// This node allows the use of SwiftUIs foreach, and also reduces the memory footprint of loading flight frames
+///
 struct HashableNode: Hashable, Identifiable {
     var id = UUID().uuidString
     let timestamp: Date
@@ -251,6 +275,9 @@ struct HashableNode: Hashable, Identifiable {
     let derrivedVerticalSpeed: Double
 }
 
+///
+/// Used to draw ground tracks on playback maps
+///
 struct MapMark: Hashable, Identifiable {
     
     let id = UUID()
@@ -267,10 +294,16 @@ struct MapMark: Hashable, Identifiable {
     }
 }
 
+///
+/// Used for decoding JSON responses to elevation queries
+///
 struct Response: Codable {
     var results: [Result]
 }
 
+///
+/// Used for decoding JSON responses to elevation queries
+///
 struct Result: Codable {
     var latitude: Double
     var longitude: Double

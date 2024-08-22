@@ -11,8 +11,8 @@ import CoreMotion
 import SwiftUI
 
 ///
-/// The FlightComputer is responsible for tracking flight parameters, but has no GUI functions.
-/// The ViewModel will poll the FlightComputer for available data to display
+/// The replay computer is for tuning the kalman filter. A recorded flight can be played back through a flight computer
+/// enabling parameters to be tuned for the best perfomrance.
 ///
 class ReplayComputer: NSObject,
                       CLLocationManagerDelegate,
@@ -156,13 +156,7 @@ class ReplayComputer: NSObject,
     
     // State
     var inFlight: Bool = false
-    var readyToFly: Bool {
-#if DEBUG
-        return true
-#else
-        altAvailable && gpsAvailable && motionAvailable
-#endif
-    }
+    var readyToFly = true
     var launchTimeStamp: Date?
     var flightTime: TimeInterval {
         if inFlight && launchTimeStamp != nil {
@@ -290,7 +284,16 @@ extension ReplayComputer {
         
         // 4 - Assignment / maintenance
         verticalSpeedMps = abs(predictedVerticalSpeed) > 0.1 ? predictedVerticalSpeed : 0.0
-        verticalSpeedHistory.append(predictedVerticalSpeed)
+        
+        if baroAltitudeHistory.count > 2 {
+            let derrivedVerticalSpeed = baroAltitudeHistory.last! - baroAltitudeHistory.first!
+            if derrivedVerticalSpeed > 0.5 {
+                verticalSpeedMps *= 1.25
+            }
+        }
+        
+        // 4 - Assignment / maintenance
+        verticalSpeedHistory.append(verticalSpeedMps)
         
         // Detect thermic activity by way of consistant acceleration
         // If net change is > 0.1g or 0.98 m/s2, or consistent 0.5 m/s vertical velocity interpret a detected thermal

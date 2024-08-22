@@ -65,43 +65,35 @@ class FlightComputer: NSObject,
     var gpsSpeed = 0.0
     var gpsCourse = 0.0
     var magneticHeading = 0.0
-    var currentCoords: CLLocationCoordinate2D = .init(latitude: 0, longitude: 0)
+    var currentCoords = CLLocationCoordinate2D()
     
     // Acceleration
     var pitchInDegrees = 0.0
     var rollInDegrees = 0.0
     var yawInDegrees = 0.0
-    var acceleration: CMAcceleration = .init()
-    var gravity: CMAcceleration = .init()
+    var acceleration = CMAcceleration()
+    var gravity = CMAcceleration()
     
     // Baro/Altitude/Elevation
     var baroAltitude = 0.0
     var terrainElevation = 0.0
     var calculatedElevation = 0.0
-    var glideRangeInMetres: Double {
-        // Estimate glide ratio 10:1
-        return calculatedElevation * glideRatio
-    }
-    var glideRatio: Double {
-        if gpsSpeed < 1.5 {
-            return 0.0
-        }
-#warning("Fix this")
-        let ratio = abs((gpsSpeed / verticalVelocityMps).rounded(toPlaces: 1))
-        
-        return ratio > 0 ? ratio : Double.infinity
-    }
-    var verticalVelocityMps = 0.0
+    var glideRangeInMetres = 0.0
+    var glideRatio = 10.0
+    var verticalSpeedMps = 0.0
     var verticalAccelerationMps2 = 0.0
     var nearestThermal: CLLocationCoordinate2D?
     var headingToNearestThermal: Double = .nan
     var distanceToNearestThermal: Double = .nan
-    var computationCycle = 0.0
+    
+    // Wind
+    var relativeWindDirection = 0.0
+    var relativeWindSpeed = 0.0
     
     // For vertical velocity and elevation calculations
     private var baroAltitudeHistory: [Double] = []
     private var zHistory: [[Double]] = []
-    private var verticalVelocityHistory: [Double] = []
+    private var verticalSpeedHistory: [Double] = []
     private let MAX_BARO_HISTORY  = 3
     private let MAX_ACCEL_HISTORY  = 400
     private var lastElevationUpdate = Date.distantPast
@@ -109,31 +101,30 @@ class FlightComputer: NSObject,
     
     // Kalman filter
     // Initial state vector (Alt, VS, VA)
-    let x = Matrix(vector: [0.0, 0.0, 0.0])
-    let t = 1.0
+    private let x = Matrix(vector: [0.0, 0.0, 0.0])
+    private let t = 1.0
     // Altitude/VS uncertain, acceleration is not
-    let errorCovariancePrior = Matrix(grid: [10.0, 0.0, 0.0,
-                                             0.0, 10.0, 0.0,
-                                             0.0, 0.0, 1.0], rows: 3, columns: 3)
+    private let errorCovariancePrior = Matrix(grid: [10.0, 0.0, 0.0,
+                                                     0.0, 10.0, 0.0,
+                                                     0.0, 0.0, 1.0], rows: 3, columns: 3)
     // Set at init
-    var f_k_stateTransitionModel: Matrix
+    private var f_k_stateTransitionModel: Matrix
     // Fixed to measurements
-    let h_k_observationModel = Matrix(grid: [1.0, 0.0, 0.0,
-                                             0.0, 1.0, 0.0,
-                                             0.0, 0.0, 1.0], rows: 3, columns: 3)
+    private let h_k_observationModel = Matrix(grid: [1.0, 0.0, 0.0,
+                                                     0.0, 1.0, 0.0,
+                                                     0.0, 0.0, 1.0], rows: 3, columns: 3)
     // Not used
-    let b_k_controlInputModel = Matrix(squareOfSize: 3)
+    private let b_k_controlInputModel = Matrix(squareOfSize: 3)
     // Not used
-    let u_k_controlVector = Matrix(vectorOf: 3)
-    var q_k_processNoiseCovariance = Matrix(identityOfSize: 3) * 1e-2
-    var r_k_measurementNoiseCovariance = Matrix(identityOfSize: 3) * 1e-2
-    var kalmanFilter: KalmanFilter<Matrix>
+    private let u_k_controlVector = Matrix(vectorOf: 3)
+    private var q_k_processNoiseCovariance = Matrix(identityOfSize: 3) * 1e-2
+    private var r_k_measurementNoiseCovariance = Matrix(identityOfSize: 3) * 1e-2
+    private var kalmanFilter: KalmanFilter<Matrix>
     
     // Services
     private let manager = CLLocationManager()
     private let altimeter = CMAltimeter()
     private let motionManager = CMMotionManager()
-    private let cmRecorder = CMSensorRecorder()
     private let refreshQueue = OperationQueue()
     
     ///
@@ -145,14 +136,11 @@ class FlightComputer: NSObject,
             if !gpsAvailable {
                 manager.requestAlwaysAuthorization()
             }
-            
             if !altAvailable {
                 throw FlightComputerError.altNotAvailable("Baro not available")
-            }
-            if !gpsAvailable {
+            } else if !gpsAvailable {
                 throw FlightComputerError.gpsNotAvailable("GPS not available")
-            }
-            if !motionAvailable {
+            } else if !motionAvailable {
                 throw FlightComputerError.motionNotAvailable("Motion not available")
             }
             return
@@ -185,13 +173,12 @@ class FlightComputer: NSObject,
     func calculateVerticalVelocity() {
         
         guard !zHistory.isEmpty else {
-            verticalVelocityMps = 0.0
+            verticalSpeedMps = 0.0
             return
         }
         
         // 1 - Base case
-        
-        verticalVelocityMps = baroAltitudeHistory.simpleMovingAverage()
+        verticalSpeedMps = baroAltitudeHistory.simpleMovingAverage()
         
         // 2 - Kalman Filter
         if let measurement = zHistory.last  {
@@ -213,83 +200,85 @@ class FlightComputer: NSObject,
             )
         }
         
-        let predictedAltitude = kalmanFilter.stateEstimatePrior[0, 0]
+        let predictedVerticalSpeed = kalmanFilter.stateEstimatePrior[1, 0]
+        let verticalSpeedAverage = verticalSpeedHistory.average
         
-        // 3 - Gain - If filter lags or leads race to catch up
+        // 3 Apply filter / gain
+        verticalSpeedMps = abs(predictedVerticalSpeed) > 0.1 ? predictedVerticalSpeed : 0.0
         
-        var delta = 1.0
-        let GAIN = 0.2
-        
-        // Fitler is close, use it
-        if predictedAltitude > 0.8 * baroAltitude && predictedAltitude < 1.2 * baroAltitude {
-            if predictedAltitude < baroAltitude * 0.85 {
-                // filter is lagging
-                delta *= (1 + GAIN)
-            } else if predictedAltitude > baroAltitude * 0.85 {
-                // filter is leading
-                delta *= (1 - GAIN)
+        if baroAltitudeHistory.count > 2 {
+            let derrivedVerticalSpeed = baroAltitudeHistory.last! - baroAltitudeHistory.first!
+            if derrivedVerticalSpeed > 0.5 {
+                verticalSpeedMps *= 1.25
             }
         }
-        
-        verticalVelocityMps *= delta
         
         // 4 - Assignment / maintenance
-        verticalVelocityHistory.append(verticalVelocityMps)
-        
-        // Don't pass back insignifigant values
-        verticalVelocityMps = abs(verticalVelocityMps) < 0.1 ? 0 : verticalVelocityMps
-        
-        // Cleanup
-        if verticalVelocityHistory.count > MAX_BARO_HISTORY {
-            let recordsToRemove = self.verticalVelocityHistory.count - self.MAX_BARO_HISTORY
-            for i in 0 ..< recordsToRemove {
-                self.verticalVelocityHistory.remove(at: i)
-            }
-        }
+        verticalSpeedHistory.append(verticalSpeedMps)
         
         // Detect thermic activity by way of consistant acceleration
         // If net change is > 0.1g or 0.98 m/s2, or consistent 0.5 m/s vertical velocity interpret a detected thermal
-        if verticalVelocityMps > 0.5 && verticalAccelerationMps2 > 0.1 {
+        if verticalSpeedMps > 0.5 && verticalAccelerationMps2 > 0.1 {
             nearestThermal = currentCoords
+        }
+        
+        // Glide Ratio
+        if gpsSpeed > 1.5 && verticalSpeedMps < 0.0 {
+            let ratio = (gpsSpeed / abs(verticalSpeedMps)).rounded(toPlaces: 1)
+            glideRatio = ratio > 0 ? ratio : 10
+        } else {
+            glideRatio = .zero
+        }
+        
+        // Cleanup
+        if verticalSpeedHistory.count > MAX_BARO_HISTORY {
+            let recordsToRemove = self.verticalSpeedHistory.count - self.MAX_BARO_HISTORY
+            for i in 0 ..< recordsToRemove {
+                self.verticalSpeedHistory.remove(at: i)
+            }
         }
     }
     
     ///
     /// Calculates the current elevation based on lat/long and altitude
+    /// Periodically updates elevation reference to calculate against
     ///
     func calculateElevation() async {
-        if currentCoords.latitude == 0  || currentCoords.longitude == 0 {
-            return
-        }
         
-        let api = "https://api.open-elevation.com"
-        let endpoint = "/api/v1/lookup?locations=\(currentCoords.latitude),\(currentCoords.longitude)"
-        guard let url = URL(string: api + endpoint) else { return }
-        
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+        // Update elevation reference
+        if Date.now - self.lastElevationUpdate > TimeInterval(self.SECONDS_BETWEEN_ELEVATION_UPDATES) &&
+           currentCoords.latitude != 0 &&
+            currentCoords.longitude != 0 {
             
-            if let decodedResponse = try? JSONDecoder().decode(Response.self, from: data) {
-                if let terrainElevation = decodedResponse.results.first?.elevation {
-                    // Set elevation over ground based on baro reading
-                    calculatedElevation = Double.maximum(baroAltitude - terrainElevation, 0)
+            let api = "https://api.open-elevation.com"
+            let endpoint = "/api/v1/lookup?locations=\(currentCoords.latitude),\(currentCoords.longitude)"
+            guard let url = URL(string: api + endpoint) else { return }
+            
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                
+                if let decodedResponse = try? JSONDecoder().decode(Response.self, from: data) {
+                    if decodedResponse.results.first?.elevation != nil {
+                        terrainElevation = decodedResponse.results.first!.elevation
+                    }
+                }
+            } catch {
+                if delegate != nil && delegate?.logger != nil {
+                    delegate!.logger!.error("CoreMotion: Error retrieiving location")
+                    delegate!.logger!.error("Error: \(error.localizedDescription)")
+                } else if delegate != nil {
+                    delegate!.logger!.error("Error fetching elevation data")
                 }
             }
-            
-            // Detect a landing, no velocity and no elevation
-            if terrainElevation < 3 && self.gpsSpeed < 1 {
-#if DEBUG
-                // Don't check for landing when in debug
-#else
-                stopFlying()
-#endif
-            }
-            
-        } catch {
-            if delegate != nil && delegate?.logger != nil {
-                delegate!.logger!.error("CoreMotion: Error retrieiving location")
-                delegate!.logger!.error("Error: \(error.localizedDescription)")
-            }
+        }
+        
+        // Calculate elevation based on last known reference
+        calculatedElevation = Double.maximum(baroAltitude - terrainElevation, 0)
+        glideRangeInMetres = calculatedElevation * glideRatio
+        
+        // Detect a landing, no velocity and no elevation
+        if inFlight && terrainElevation < 3 && self.gpsSpeed < 1 {
+            stopFlying()
         }
     }
 }
@@ -343,6 +332,9 @@ extension FlightComputer {
                 
                 distanceToNearestThermal = thermalLocation.distance(from: currentLocation)
             }
+            
+            // Estimate relative wind
+            calculateRelativeWind()
         }
     }
     
@@ -393,6 +385,7 @@ extension FlightComputer {
     ///
     /// Checks for GPS availability
     ///
+    /// - Returns true if GPS avail
     private func checkGpsAvailable() -> Bool {
         return manager.authorizationStatus == .authorizedAlways ||
         manager.authorizationStatus == .authorizedWhenInUse
@@ -428,6 +421,10 @@ extension FlightComputer {
     ///
     /// Calculates Z acceleration
     ///
+    /// - Parameter forGravity: Measured gravity to measure against
+    /// - Parameter forAcceleration: Measured acceleration to measure against
+    ///
+    /// - Returns Derrived acceleration in Z, double
     private func calculateAbsoluteZAcceleration(forGravity gravity: CMAcceleration, forAcceleration acceleration: CMAcceleration) -> Double {
         // Gravity for orientation
         let gravityVector = Vector3(
@@ -451,6 +448,33 @@ extension FlightComputer {
     }
     
     ///
+    /// Estimates wind speed and direction based on GPS  and compass measurements
+    ///
+    private func calculateRelativeWind() {
+        let groundTrack = gpsCourse.degreesToRadians
+        let airTrack = magneticHeading.degreesToRadians
+        let trimSpeed = delegate?.trimSpeed ?? 34.0
+        
+        // Calculate the components of the groundspeed vectors
+        let groundSpeedX = gpsSpeed * cos(groundTrack)
+        let groundSpeedY = gpsSpeed * sin(groundTrack)
+        let trimSpeedX = trimSpeed * cos(airTrack)
+        let trimSpeedY = trimSpeed * sin(airTrack)
+        
+        // Calculate wind components
+        let windX = groundSpeedX - trimSpeedX
+        let windY = groundSpeedY - trimSpeedY
+        
+        // Calculate wind speed
+        relativeWindSpeed = abs(sqrt(windX * windX + windY * windY))
+        relativeWindSpeed = relativeWindSpeed.rounded(toPlaces: 1)
+        
+        // Calculate wind direction
+        relativeWindDirection = (atan2(windY, windX) * 180.0 / .pi)
+        relativeWindDirection = relativeWindDirection.rounded(toPlaces: 1)
+    }
+    
+    ///
     /// Starts Baro Services
     ///
     private func startBaroUpdates() {
@@ -460,15 +484,10 @@ extension FlightComputer {
             if data != nil {
                 
                 self.altAvailable = true
-                
-                let df = DateFormatter()
-                df.dateFormat = "y-MM-dd H:mm:ss.SSSS"
                 self.baroAltitude = data!.altitude
                 self.baroAltitudeHistory.append(data!.altitude.rounded(toPlaces: 3))
                 
-                // Truncate altitude history to last 12 frames for vertical speed calcs
-                // Barometer samples at 6 hz, with an average trim speed of 30 km/h
-                // or 8.3 m/s, yields an average sample of 16.6m travelled
+                // Cleanup
                 if self.baroAltitudeHistory.count >= self.MAX_BARO_HISTORY {
                     let recordsToRemove = self.baroAltitudeHistory.count - self.MAX_BARO_HISTORY
                     for i in 0 ..< recordsToRemove {
@@ -476,38 +495,29 @@ extension FlightComputer {
                     }
                 }
                 
-                // Params for Kalman filter
+                if self.zHistory.count > self.MAX_BARO_HISTORY {
+                    let recordsToRemove = self.zHistory.count - self.MAX_BARO_HISTORY
+                    for i in 0 ..< recordsToRemove {
+                        self.zHistory.remove(at: i)
+                    }
+                }
+                
                 Task(priority: .high) {
+                    // Params for Kalman filter
                     let zAccel = self.calculateAbsoluteZAcceleration(
                         forGravity: self.gravity,
                         forAcceleration: self.acceleration
                     )
                     let altitude = self.baroAltitude.isNaN ? 0.0 : self.baroAltitude
-                    let verticalVelocity = self.verticalVelocityMps.isNaN ? 0.0 : self.verticalVelocityMps
+                    let verticalVelocity = self.verticalSpeedMps.isNaN ? 0.0 : self.verticalSpeedMps
                     self.verticalAccelerationMps2 = zAccel.isNaN ? 0.0 : zAccel
                     
                     self.zHistory.append([altitude, verticalVelocity, zAccel])
                     
-                    // Cleanup
-                    if self.zHistory.count > self.MAX_BARO_HISTORY {
-                        let recordsToRemove = self.zHistory.count - self.MAX_BARO_HISTORY
-                        for i in 0 ..< recordsToRemove {
-                            self.zHistory.remove(at: i)
-                        }
-                    }
-                }
-                
-                // Calculate vertical speed on every baro update, 6 hz
-                Task(priority: .high) {
+                    // Calculate vertical speed on every baro update, 6 hz
                     self.calculateVerticalVelocity()
-                }
-                
-                
-                // Update elevation if last update is long enough ago
-                Task(priority: .high) {
-                    if Date.now - self.lastElevationUpdate > TimeInterval(self.SECONDS_BETWEEN_ELEVATION_UPDATES) {
-                        await self.calculateElevation()
-                    }
+                    // Update elevation if last update is long enough ago
+                    await self.calculateElevation()
                 }
                 
             } else {

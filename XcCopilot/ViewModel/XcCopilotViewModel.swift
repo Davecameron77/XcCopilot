@@ -29,23 +29,24 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     @Published var alertShowing = false
    
     // Motion
-    @Published var verticalAccelerationMetresPerSecondSquared = 0.0
+    @Published var verticalAccelerationMps2 = 0.0
     
     // GPS
     @Published var gpsCoords = CLLocationCoordinate2D.init(latitude: 0.0, longitude: 0.0)
-    @Published var gpsAltitude = CLLocationDistance.zero
-    @Published var gpsSpeed = CLLocationSpeed.zero
-    @Published var gpsCourse = CLLocationDirection.zero
+    @Published var gpsAltitude = 0.0
+    @Published var gpsSpeed = 0.0
+    @Published var gpsCourse = 0.0
     
     // Altimeter
     @Published var baroAltitude = 0.0
     @Published var calculatedElevation = 0.0
     @Published var verticalSpeedMps = 0.0
+    @Published var glideRatio = 1.0
     @Published var glideRangeInMetres = 0.0
+    @Published var glideRangeInPixels = 0.0
     @Published var nearestThermalHeading = 0.0
     @Published var nearestThermalDistance = 0.0
-    @Published var glideRatio = 1.0
-    
+        
     // Permissions
     @Published var altAvailable = false
     @Published var gpsAvailable = false
@@ -53,6 +54,10 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     
     // Compass
     @Published var magneticHeading = 0.0
+    
+    // Wind
+    @Published var windSpeed: Double = 0.0
+    @Published var windDirection: Double = 0.0
     
     // Weather
     @Published var currentWeather: Weather?
@@ -68,7 +73,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
             distance: 500
         )
     )
-    @Published var glideRange = 0.0
+    
     
     // Logbook
     @Published var flightsInLogbook: [Flight] = []
@@ -122,7 +127,14 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         }
     }
     // Glider metadata
-    @AppStorage("gliderName") var gliderName: String = "Unnamed Glider" {
+    @AppStorage("pilotName") var pilotName: String = "Dave Cameron" {
+        willSet {
+            DispatchQueue.main.async {
+                self.objectWillChange.send()
+            }
+        }
+    }
+    @AppStorage("gliderName") var gliderName: String = "Independance Pioneer" {
         willSet {
            DispatchQueue.main.async {
               self.objectWillChange.send()
@@ -137,7 +149,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         }
     }
     
-    let REFRESH_FREQUENCY = 1.0
+    private let REFRESH_FREQUENCY = 1.0
     private var updateTimer: Timer?
     
     private var currentWeatherTimestamp = Date.distantPast
@@ -153,7 +165,8 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     init() {
         mapPosition = MapCameraPosition.userLocation(followsHeading: true, fallback: cameraBackup)
         
-        flightComputer = FlightComputer()
+        flightComputer = ReplayComputer()
+//        flightComputer = FlightComputer()f
         flightRecorder = FlightRecorder()
         flightAnalzyer = FlightAnalyzer()
         
@@ -174,7 +187,13 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     func armForFlight() {
         flightState = .armed
         Task {
-            try await flightRecorder.armForFlight()
+            do {
+                try await flightRecorder.armForFlight()
+            } catch {
+                logger?.debug("Error arming for flight: \(error)")
+                showAlert(withText: "Error arming for flight")
+            }
+            
         }
     }
     
@@ -186,7 +205,8 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         do {
             try flightComputer.startFlying()
         } catch  {
-            logger?.debug("\(error.localizedDescription)")
+            logger?.debug("Error starting flight: \(error)")
+            showAlert(withText: "Error starting flight")
         }
     }
     
@@ -198,13 +218,13 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         flightComputer.stopFlying()
         Task {
             do {
-                try await flightRecorder.endFlight(withWeather: currentWeather)
+                try await flightRecorder.endFlight(withWeather: currentWeather, pilot: pilotName, glider: gliderName)
                 await MainActor.run {
                     flightTime = .zero
                 }
             } catch {
-                showAlert(withText: error.localizedDescription)
-                logger?.debug("\(error.localizedDescription)")
+                showAlert(withText: "Error stopping flight")
+                logger?.debug("Error stopping flight: \(error)")
             }
         }
     }
@@ -214,40 +234,52 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     func updateFlightVars() {
         
-        verticalSpeedMps = flightComputer.verticalVelocityMps
-        verticalAccelerationMetresPerSecondSquared = flightComputer.verticalAccelerationMps2
-        glideRangeInMetres = flightComputer.glideRangeInMetres
-        glideRatio = flightComputer.glideRatio
-        
-        gpsCoords = flightComputer.currentCoords
-        gpsAltitude = elevationUnits(elevationMetres: flightComputer.gpsAltitude)
-        gpsSpeed = speedUnits(speedMetresSecond: flightComputer.gpsSpeed)
+        Task(priority: .high) {
+            await MainActor.run {
+                verticalSpeedMps = flightComputer.verticalSpeedMps
+                verticalAccelerationMps2 = flightComputer.verticalAccelerationMps2
+                glideRangeInMetres = flightComputer.glideRangeInMetres
+                glideRatio = flightComputer.glideRatio
+                
+                gpsCoords = flightComputer.currentCoords
+                gpsAltitude = elevationUnits(elevationMetres: flightComputer.gpsAltitude)
+                gpsSpeed = speedUnits(speedMetresSecond: flightComputer.gpsSpeed)
 
-        // In case a course is not detected, assigns the current magnetic heading for display
-        gpsCourse = flightComputer.gpsCourse == -1.0 ? magneticHeading : flightComputer.gpsCourse
-        
-        baroAltitude = elevationUnits(elevationMetres: flightComputer.baroAltitude)
-        calculatedElevation = elevationUnits(elevationMetres: flightComputer.calculatedElevation)
-        magneticHeading = flightComputer.magneticHeading
-        
-        // Detect a launch
-        if flightState == .armed && gpsSpeed > 5.5 {
-            startFlying()
+                // In case a course is not detected, assigns the current magnetic heading for display
+                gpsCourse = flightComputer.gpsCourse == -1.0 ? magneticHeading : flightComputer.gpsCourse
+                
+                baroAltitude = elevationUnits(elevationMetres: flightComputer.baroAltitude)
+                calculatedElevation = elevationUnits(elevationMetres: flightComputer.calculatedElevation)
+                magneticHeading = flightComputer.magneticHeading
+                
+                windSpeed = speedUnits(speedMetresSecond: flightComputer.relativeWindSpeed)
+                windDirection = flightComputer.relativeWindDirection
+                
+                // Flight specific tracking
+                if flightState == .inFlight {
+                    nearestThermalHeading = flightComputer.headingToNearestThermal
+                    nearestThermalDistance = flightComputer.distanceToNearestThermal
+                    
+                    flightTime = Duration.seconds(flightComputer.flightTime)
+                    
+                    playVarioSound()
+                }
+            }
         }
         
-        // Flight specific tracking
-        if flightState == .inFlight {
-            nearestThermalHeading = flightComputer.headingToNearestThermal
-            nearestThermalDistance = flightComputer.distanceToNearestThermal
-            
-            flightTime = Duration.seconds(flightComputer.flightTime)
-            
-            playVarioSound()
+        
+        // Detect a launch
+        if flightState == .armed && gpsSpeed > 7.0 {
+            startFlying()
         }
         
         // Detect a landing
         if flightState == .inFlight && gpsSpeed < 1.0 && calculatedElevation < 10.0 {
+            #if DEBUG
+            
+            #else
             stopFlying()
+            #endif
         }
     }
     
@@ -261,16 +293,16 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         case -100 ..< -4.0:
             // Play at 6hz
             SoundManager.shared.playTone(forFrequency: .sixHzDescend)
-        case -4.0 ..< -1.0:
+        case -4.0 ..< -1.5:
             // Play at 4hz
             SoundManager.shared.playTone(forFrequency: .fourHzDescend)
-        case -1.0 ..< -0.25:
+        case -1.5 ..< -1.0:
             // Play at 2hz
             SoundManager.shared.playTone(forFrequency: .twoHzDescend)
-        case -0.25 ..< 0.25:
+        case -0.1 ..< 0.5:
             // Trivial vertical motion
             return
-        case 0.25 ..< 2.0:
+        case 0.5 ..< 2.0:
             // Play at 2hz
             SoundManager.shared.playTone(forFrequency: .twoHzAscend)
         case 2.0 ..< 4.0:
@@ -289,30 +321,25 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     func updateWeather() {
         if Date.now.distance(to: self.currentWeatherTimestamp) > TimeInterval(1800) || self.currentWeather == nil {
-            let location = CLLocation(
-                latitude: flightComputer.currentCoords.latitude,
-                longitude: flightComputer.currentCoords.longitude
-            )
-            
             Task {
-                if let weather = try? await self.fetchWeather(forLocation: location) {
-                    DispatchQueue.main.async {
-                        self.currentWeather = weather
-                        self.currentWeatherTimestamp = Date.now
+                let location = CLLocation(
+                    latitude: flightComputer.currentCoords.latitude,
+                    longitude: flightComputer.currentCoords.longitude
+                )
+                
+                do {
+                    let weather = try await weatherService.weather(for: location)
+                    await MainActor.run {
+                        currentWeather = weather
+                        currentWeatherTimestamp = Date.now
                     }
+                } catch {
+                    logger?.debug("Error fetching weather: \(error)")
+                    showAlert(withText: "Error fetching weather")
                 }
+                
             }
         }
-    }
-    
-    ///
-    /// Fetches a weather update
-    ///
-    /// - Parameter forLocation - The location to fetch weather for
-    func fetchWeather(forLocation location: CLLocation) async throws -> Weather? {
-        var weather: Weather?
-        try weather = await weatherService.weather(for: location)
-        return weather
     }
 
     ///
@@ -343,6 +370,8 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     /// Imports an IGC file
     ///
     /// - Parameter forUrl: The file to import
+    ///
+    /// - Returns true on success
     func importIgcFile(forUrl url: URL) async -> Bool {
         let task = Task(priority: .background) {
             do {
@@ -363,6 +392,8 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     /// Exports an IGC file
     ///
     /// - Parameter flight: The flight to export
+    ///
+    /// - Returns IgcFile: Optional if the export was successful
     func exportIgcFile(flight: Flight) async -> IgcFile? {
         let task = Task(priority: .background) {
             do {
@@ -380,6 +411,8 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     /// Returns flights for logbook
     ///
+    ///
+    /// - Returns A list of found flights
     func getFlights() async throws -> [Flight] {
         do {
             return try await flightRecorder.getFlights()
@@ -393,6 +426,10 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     /// Returns flights around given region for analysis view
     ///
+    /// - Parameter region: The region to search
+    /// - Parameter withSpan: The span to search around the region
+    ///
+    /// - Returns A list of found flights
     func getFlightsAroundRegion(_ region: CLLocationCoordinate2D, withSpan span: MKCoordinateSpan) async -> [Flight] {
         do {
             return try await flightRecorder.getFlightsAroundCoords(region, withSpan: span)
@@ -439,6 +476,8 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     /// - Parameter : Array of flights to analyze
     /// - Parameter withinSpan: The area to search
+    ///
+    /// - Returns an optional DmsQuadtree with results if they are found
     func analyzeFlights(
         _ flights: [Flight],
         aroundCoords coords: CLLocationCoordinate2D,
@@ -471,17 +510,18 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         let span = context.region.span
         
         // Top reference of map
-        let loc1 = CLLocation(latitude: center.latitude - span.latitudeDelta * 0.5,
-                              longitude: center.longitude)
+        let topOfMap = CLLocation(latitude: center.latitude - span.latitudeDelta * 0.5,
+                                  longitude: center.longitude)
         // Bottom reference of map
-        let loc2 = CLLocation(latitude: center.latitude + span.latitudeDelta * 0.5,
-                              longitude: center.longitude)
+        let bottomOfMap = CLLocation(latitude: center.latitude + span.latitudeDelta * 0.5,
+                                     longitude: center.longitude)
         // Map height in Meters
-        let screenHeightMeters = Measurement(value: loc1.distance(from: loc2),
+        let screenHeightMeters = Measurement(value: topOfMap.distance(from: bottomOfMap),
                                              unit: UnitLength.meters).value
         
         let pxPerMeter = geometry.size.height / screenHeightMeters
-        glideRange = glideRangeInMetres * pxPerMeter
+        glideRangeInPixels = glideRangeInMetres * pxPerMeter
+        glideRangeInPixels = glideRangeInPixels > 0 ? glideRangeInPixels : 1
     }
     
 }

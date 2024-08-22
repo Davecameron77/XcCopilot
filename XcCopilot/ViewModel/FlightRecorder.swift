@@ -17,38 +17,6 @@ actor FlightRecorder {
     
     var flight: Flight?
     static var flightDate: Date = Date.now
-    
-    private static var container: NSPersistentContainer = {
-        let container = NSPersistentContainer(name: "XCCopilot")
-        container.loadPersistentStores { description, error in
-            if let error = error {
-                fatalError("Unable to load persistent stores: \(error)")
-            }
-        }
-        return container
-    }()
-        
-//    private static var context: NSManagedObjectContext {
-//        return Self.container.viewContext
-//    }
-    
-    let context: NSManagedObjectContext
-    init() {
-        context = NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
-    }
-    
-//    let container: NSPersistentContainer
-//    let context: NSManagedObjectContext
-//    
-//    init() {
-//        container = NSPersistentContainer(name: "XCCopilot")
-//        container.loadPersistentStores { storeDescription, error in
-//            if let error = error as NSError? {
-//                fatalError("Core Data error: \(error)")
-//            }
-//        }
-//        context = container.viewContext
-//    }
 
     ///
     /// Enables takeoff detection and passes a reference of the flight to record
@@ -56,6 +24,28 @@ actor FlightRecorder {
     /// - Parameter flight - The flight to store frames in
     func armForFlight() throws {
         flight = try createFlightWithTitle()
+    }
+    
+    ///
+    /// Creates a frame for a provided flight or the currently active flight
+    ///
+    /// - Parameter forFlight: The flight to assign the frame to
+    private func createFrame(forFlight flight: Flight?) throws -> FlightFrame {
+        
+        guard flight != nil || self.flight != nil else { throw CdError.recordingFailure("Error creating flightframe, no flight found") }
+        
+        let frame = FlightFrame(context: CoreDataManager.sharedContext)
+        frame.id = UUID()
+        
+        if flight != nil {
+            frame.flight = flight ?? self.flight
+            frame.flightID = flight!.igcID ?? self.flight!.igcID
+        } else {
+            frame.flight = self.flight
+            frame.flightID = self.flight!.igcID
+        }
+        
+        return frame
     }
     
     ///
@@ -90,10 +80,10 @@ actor FlightRecorder {
     ///
     /// Ends a flight, calculating metadata
     ///
-    func endFlight(withWeather weather: Weather?) async throws {
+    func endFlight(withWeather weather: Weather?, pilot pilotName: String, glider gliderName: String) async throws {
         guard flight != nil else { throw FlightRecorderError.invalidState("No flight assigned for recording") }
         
-        try concludeStoringFlight(flight!, andWeather: weather)
+        try concludeStoringFlight(flight!, andWeather: weather, pilot: pilotName, glider: gliderName)
     }
     
 }
@@ -109,7 +99,8 @@ extension FlightRecorder {
         let sortDescriptor = NSSortDescriptor(key: "startDate", ascending: true)
         request.sortDescriptors = [sortDescriptor]
         
-        return try context.fetch(request)
+        let result = try CoreDataManager.sharedContext.fetch(request)
+        return result
     }
     
     ///
@@ -153,7 +144,7 @@ extension FlightRecorder {
         )
         request.predicate = predicate
         
-        let result = try context.fetch(request)
+        let result = try CoreDataManager.sharedContext.fetch(request)
 
         return result
     }
@@ -165,7 +156,7 @@ extension FlightRecorder {
     private func getFlight(withIgcId igcId: String) throws -> Flight {
         let request = Flight.fetchRequest()
         request.predicate = NSPredicate(format: "igcID == %@", igcId)
-        let results = try context.fetch(request)
+        let results = try CoreDataManager.sharedContext.fetch(request)
         
         if results.isEmpty {
             throw CdError.noRecordsFound("No stored flight found")
@@ -178,38 +169,16 @@ extension FlightRecorder {
     /// Creates and stores a new flight with a given title, active or logbook
     /// If no title is supplied, it is stored as 'Unknown Flight'
     ///
-    private func createFlightWithTitle(_ title: String = "Unknown Flight") throws -> Flight {
-        let flight = Flight(context: context)
+    private func createFlightWithTitle(_ title: String = "\(Date.now.formatted(.iso8601))") throws -> Flight {
+        let flight = Flight(context: CoreDataManager.sharedContext)
         flight.id = UUID()
         flight.igcID = flight.id!.uuidString
         flight.title = title
         
-        context.insert(flight)
-        try context.save()
+        CoreDataManager.sharedContext.insert(flight)
+        try CoreDataManager.sharedContext.save()
         
         return flight
-    }
-
-    ///
-    /// Creates a frame for a provided flight or the currently active flight
-    ///
-    /// - Parameter forFlight: The flight to assign the frame to
-    private func createFrame(forFlight flight: Flight?) throws -> FlightFrame {
-        
-        guard flight != nil || self.flight != nil else { throw CdError.recordingFailure("Error creating flightframe, no flight found") }
-        
-        let frame = FlightFrame(context: context)
-        frame.id = UUID()
-        
-        if flight != nil {
-            frame.flight = flight ?? self.flight
-            frame.flightID = flight!.igcID ?? self.flight!.igcID
-        } else {
-            frame.flight = self.flight
-            frame.flightID = self.flight!.igcID
-        }
-        
-        return frame
     }
     
     ///
@@ -217,8 +186,8 @@ extension FlightRecorder {
     ///
     /// - Parameter frame: The frame to store
     private func saveFrame(_ frame: FlightFrame) throws {
-        context.insert(frame)
-        try context.save()
+        CoreDataManager.sharedContext.insert(frame)
+        try CoreDataManager.sharedContext.save()
     }
     
     ///
@@ -226,10 +195,13 @@ extension FlightRecorder {
     ///
     /// - Parameter flight - The flight to delete
     func deleteFlight(_ flight: Flight) throws {
-        context.delete(flight)
-        try context.save()
+        CoreDataManager.sharedContext.delete(flight)
+        try CoreDataManager.sharedContext.save()
     }
     
+    ///
+    /// Utility function for unit tests
+    ///
     func deleteAllFlights() throws {
         
         do {
@@ -251,9 +223,9 @@ extension FlightRecorder {
         let query = Flight.fetchRequest()
         let predicate = NSPredicate(format: "igcID == %@", flight.igcID!)
         query.predicate = predicate
-        let results = try context.fetch(query)
+        let results = try CoreDataManager.sharedContext.fetch(query)
         if let storedFlight = results.first {
-            try context.save()
+            try CoreDataManager.sharedContext.save()
             storedFlight.title = newTitle
         }
         
@@ -264,7 +236,7 @@ extension FlightRecorder {
     ///
     /// - Parameter flight: The flight to conclude
     /// - Parameter weather: The weather to append, if available
-    private func concludeStoringFlight(_ flight: Flight, andWeather weather: Weather?) throws {
+    private func concludeStoringFlight(_ flight: Flight, andWeather weather: Weather?, pilot: String?, glider: String?) throws {
         if let frames = flight.frames?.allObjects as? [FlightFrame] {
             guard let first = frames.min(by: { $0.timestamp! < $1.timestamp! }),
                   let last = frames.max(by: { $0.timestamp! < $1.timestamp! }) else {
@@ -339,6 +311,8 @@ extension FlightRecorder {
             flight.varioHardwareVer = "iPhone"
             flight.varioFirmwareVer = ""
             flight.gpsModel = "iPhone"
+            flight.pilot = pilot ?? "Unknown Pilot"
+            flight.gliderName = glider ?? "Unknown Glider"
             #if !DEBUG
             flight.flightTitle = "Imported Flight: \(flightDate.formatted(.dateTime.year().month().day()))"
             #endif
@@ -348,7 +322,7 @@ extension FlightRecorder {
                 flight.addWeather(weather: weather!)
             }
             
-            try context.save()
+            try CoreDataManager.sharedContext.save()
         }
     }
     
@@ -358,37 +332,39 @@ extension FlightRecorder {
     /// - Parameter forUrl: The URL from which the flight shall be imported
     func importFlight(forUrl url: URL) async throws {
         
-        do {
-            
-            var flight = try createFlightWithTitle(url.lastPathComponent)
-            flight.imported = true
-            
-            for try await line in url.lines {
+        Task(priority: .userInitiated) {
+            do {
+                var flight = try createFlightWithTitle(url.lastPathComponent)
+                flight.imported = true
+
+                for try await line in url.lines {
+                    
+                    if line.starts(with: "A") {
+                        processARecord(record: line, forFlight: &flight)
+                    }
+                    else if line.starts(with: "B") {
+                        try processBRecord(record: line, forFlight: flight)
+                    }
+                    else if line.starts(with: "H") {
+                        try processHRecord(record: line, forFlight: &flight)
+                    }
+                }
+                            
+                try concludeStoringFlight(flight, andWeather: nil, pilot: nil, glider: nil)
                 
-                if line.starts(with: "A") {
-                    processARecord(record: line, forFlight: &flight)
+                #if DEBUG
+                print("Imported a flight: \(flight.title!)")
+                #endif
+                
+            } catch {
+                if flight != nil {
+                    try deleteFlight(flight!)
                 }
-                else if line.starts(with: "B") {
-                    try processBRecord(record: line, forFlight: flight)
-                }
-                else if line.starts(with: "H") {
-                    try processHRecord(record: line, forFlight: &flight)
-                }
+                print("Import Error: \(error)")
+                throw error
             }
-                        
-            try concludeStoringFlight(flight, andWeather: nil)
-            
-            #if DEBUG
-            print("Imported a flight: \(flight.title!)")
-            #endif
-            
-        } catch {
-            if flight != nil {
-                try deleteFlight(flight!)
-            }
-            print("Import Error: \(error)")
-            throw error
         }
+        
     }
     
     ///

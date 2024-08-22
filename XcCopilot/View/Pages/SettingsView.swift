@@ -14,20 +14,32 @@ struct SettingsView: View {
     @State private var pilotName: String = "John Doe"
     @State private var gliderName: String = "Independance Pioneer"
     
+    let formatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        return formatter
+    }()
+    
     var body: some View {
         NavigationStack {
             Form {
                 List {
                     Section("Pilot") {
                         LabeledContent {
-                            TextField("Pilot: ", text: $pilotName)
+                            TextField("Pilot: ", text: $vm.pilotName)
                         } label: {
                           Text("Pilot:")
                         }
                         LabeledContent {
-                            TextField("Glider: ", text: $gliderName)
+                            TextField("Glider: ", text: $vm.gliderName)
                         } label: {
                             Text("Glider: ")
+                        }
+                        LabeledContent {
+                            TextField("Trim Speed (km/h): ", value: $vm.trimSpeed, formatter: formatter)
+                                .keyboardType(.numberPad)
+                        } label: {
+                            Text("Trim Speed (km/h): ")
                         }
                     }
                     
@@ -62,6 +74,7 @@ struct SettingsView: View {
                         VStack(alignment: .leading) {
                             Text("Vario Audio: \(String(format: "%.0f", vm.varioVolume)) %")
                             Slider(value: $vm.varioVolume, in:0...100, step: 10)
+                                .accessibilityLabel("volume")
                         }
                     }
                     

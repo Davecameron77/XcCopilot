@@ -27,7 +27,7 @@ extension Flight {
     
     ///
     /// Appends weather to a flight
-    ///
+    /// 
     func addWeather(weather: Weather?) {
         guard weather != nil else { return }
         temperature = weather!.currentWeather.temperature.value

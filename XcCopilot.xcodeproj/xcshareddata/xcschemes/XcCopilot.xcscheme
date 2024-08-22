@@ -34,7 +34,7 @@
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B28CA58A2C631A2500272D3A"
+               BlueprintIdentifier = "B21304C32C71586600938DB9"
                BuildableName = "XcCopilotTests.xctest"
                BlueprintName = "XcCopilotTests"
                ReferencedContainer = "container:XcCopilot.xcodeproj">

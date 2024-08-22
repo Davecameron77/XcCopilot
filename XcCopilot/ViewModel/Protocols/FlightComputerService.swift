@@ -31,11 +31,14 @@ protocol FlightComputerService {
     var calculatedElevation: Double { get }
     var glideRangeInMetres: Double { get }
     var glideRatio: Double { get }
-    var verticalVelocityMps: Double { get }
+    var verticalSpeedMps: Double { get }
     var verticalAccelerationMps2: Double { get }
     var headingToNearestThermal: Double { get }
     var distanceToNearestThermal: Double { get }
     var flightTime: TimeInterval { get }
+    
+    var relativeWindSpeed: Double { get }
+    var relativeWindDirection: Double { get }
     
     var altAvailable: Bool { get }
     var gpsAvailable: Bool { get }
