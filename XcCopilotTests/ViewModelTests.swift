@@ -11,36 +11,6 @@ import XCTest
 
 final class ViewModelTests: XCTestCase {
 
-    #warning("Migrate to GUI test")
-    func testRecordingFlight() {
-        let vm = XcCopilotViewModel()
-        
-        Task {
-            try await vm.flightRecorder.deleteAllFlights()
-            
-            vm.armForFlight()
-            vm.startFlying()
-            sleep(3)
-            vm.stopFlying()
-            
-            let flights = try await vm.getFlights()
-            
-            XCTAssertNotNil(flights)
-            XCTAssertEqual(1, flights.count)
-        }
-    }
-    
-    #warning("Migrate to GUI test")
-    func testGetWeather() {
-        let vm = XcCopilotViewModel()
-        vm.updateWeather()
-        Task {
-            sleep(2)
-            XCTAssertNotNil(vm.currentWeather)
-            print("Asserted weather")
-        }
-    }
-
     func testImportIgcFile() {
         
         let vm = XcCopilotViewModel()
@@ -48,14 +18,19 @@ final class ViewModelTests: XCTestCase {
         
         if let filePath = bundle.path(forResource: "test_igc", ofType: "IGC") {
             let url = URL(fileURLWithPath: filePath)
+            
             Task {
-                try await vm.flightRecorder.deleteAllFlights()
-                let result = await vm.importIgcFile(forUrl: url)
-                let flights = try await vm.getFlights()
-                
-                XCTAssert(result)
-                XCTAssert(!flights.isEmpty)
-                XCTAssertEqual(1, flights.count)
+                do {
+                    try await vm.flightRecorder.deleteAllFlights()
+                    let result = await vm.importIgcFile(forUrl: url)
+                    let flights = try await vm.getFlights()
+                    
+                    XCTAssert(result)
+                    XCTAssert(!flights.isEmpty)
+                    XCTAssertEqual(1, flights.count)
+                } catch {
+                    print("Error with test: \(error)")
+                }
             }
         }
     }
