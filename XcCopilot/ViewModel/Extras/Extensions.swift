@@ -18,7 +18,7 @@ extension CLLocationCoordinate2D {
     func coordinateToDMS() -> String {
         let latDms = toDms(dms: latitude)
         let lonDms = toDms(dms: longitude)
-
+        
         let format = "%02d%02d%03d%@" + "%03d%02d%03d%@"
         return String(format: format, latDms.0, latDms.1, latDms.2, latitude >= 0 ? "N" : "S",
                       lonDms.0, lonDms.1, lonDms.2, longitude >= 0 ? "E" : "W")
@@ -54,7 +54,7 @@ struct MyCoordinateRegion: Hashable {
     
     static func == (lhs: MyCoordinateRegion, rhs: MyCoordinateRegion) -> Bool {
         return lhs.region.center.latitude == rhs.region.center.latitude &&
-               lhs.region.center.longitude == rhs.region.center.longitude
+        lhs.region.center.longitude == rhs.region.center.longitude
     }
 }
 
@@ -63,7 +63,7 @@ extension MKCoordinateRegion {
     var boundingBoxCoordinates: [String: CLLocationCoordinate2D] {
         let halfLatDelta = self.span.latitudeDelta / 2
         let halfLngDelta = self.span.longitudeDelta / 2
-
+        
         let topLeft = CLLocationCoordinate2D(
             latitude: self.center.latitude + halfLatDelta,
             longitude: self.center.longitude - halfLngDelta
@@ -80,7 +80,7 @@ extension MKCoordinateRegion {
             latitude: self.center.latitude + halfLatDelta,
             longitude: self.center.longitude + halfLngDelta
         )
-
+        
         return [
             "topLeft": topLeft,
             "topRight": topRight,
@@ -102,7 +102,7 @@ extension MKCoordinateRegion {
             return false
         }
     }
- 
+    
     func intersects(searchRegion: MKCoordinateRegion) -> Bool {
         let coords = self.boundingBoxCoordinates
         for coord in coords {
@@ -122,14 +122,14 @@ extension Date {
     func get(_ components: Calendar.Component..., calendar: Calendar = Calendar.current) -> DateComponents {
         return calendar.dateComponents(Set(components), from: self)
     }
-
+    
     func get(_ component: Calendar.Component, calendar: Calendar = Calendar.current) -> Int {
         return calendar.component(component, from: self)
     }
 }
 
 extension Array where Element: BinaryFloatingPoint {
-
+    
     ///
     /// The average value of all the items in the array
     ///
@@ -141,7 +141,7 @@ extension Array where Element: BinaryFloatingPoint {
             return Double(sum) / Double(self.count)
         }
     }
-
+    
     ///
     /// Calculates the average change in the array
     ///
@@ -155,8 +155,8 @@ extension Array where Element: BinaryFloatingPoint {
             sum += self[i+1] - self[i]
         }
         
-        let result = sum / Double(size - 2)
-                
+        let result = sum / (Double(size) - 1)
+        
         return result.isNaN ? 0.0 : result
     }
     
@@ -164,20 +164,31 @@ extension Array where Element: BinaryFloatingPoint {
     /// Calculates a moving average in reverse, from the most recent record until an inversion is found
     ///
     func effectiveMovingAverage() -> Double where Element == Double {
+        
         guard self.count >= 3 else { return 0.0 }
         
-        let size = self.count - 1
         var sum = 0.0
-        let ascending = self.last ?? 0.0 > 0.0
+        var values = 0
         
-        for index in stride(from: size, through: 1, by: -1) {
-            if ascending && self[index] < 0.0 { break }
-            if !ascending && self[index] > 0.0 { break }
+        for (index, currentIndex) in self.reversed().enumerated() {
             
-            sum += self[index] - self[index-1]
+            let nextIndex = self.count - index - 2
+            if nextIndex >= 0 {
+                let previous = self[nextIndex]
+                
+                if currentIndex > 0 && (currentIndex - previous) < 0 {
+                    break
+                } else if currentIndex < 0 && (previous - currentIndex) > 0 {
+                    break
+                }
+                
+                sum += (currentIndex - previous)
+                values += 1
+            }
         }
         
-        return sum / Double(size)
+        let result = sum / Double(values)
+        return result.isNaN ? 0.0 : result
     }
 }
 
@@ -186,9 +197,23 @@ extension String {
     /// Utility function to extract part of a string
     ///
     func subString(from: Int, to: Int) -> String {
-       let startIndex = self.index(self.startIndex, offsetBy: from)
-       let endIndex = self.index(self.startIndex, offsetBy: to)
-       
+        guard from <= self.count && to <= self.count else { return "" }
+        
+        let startIndex = self.index(self.startIndex, offsetBy: from)
+        let endIndex = self.index(self.startIndex, offsetBy: to)
+        
+        return String(self[startIndex..<endIndex])
+    }
+    
+    ///
+    /// Utility function extract part of a string by length
+    ///
+    func subString(from: Int, count: Int) -> String {
+        guard from <= self.count && (from + count) <= self.count else { return "" }
+        
+        let startIndex = self.index(self.startIndex, offsetBy: from)
+        let endIndex = self.index(self.startIndex, offsetBy: (from + count))
+        
         return String(self[startIndex..<endIndex])
     }
     

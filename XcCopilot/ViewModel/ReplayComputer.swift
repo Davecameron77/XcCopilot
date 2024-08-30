@@ -57,7 +57,7 @@ class ReplayComputer: NSObject,
         
         updateTimer = Timer.scheduledTimer(withTimeInterval: REFRESH_FREQUENCY,
                                            repeats: true) { timer in
-            print("Sequence: \(self.timeDelay)")
+//            print("Sequence: \(self.timeDelay)")
             
             self.timeDelay += 1
             if self.timeDelay >= 0 && Int(self.timeDelay) < records.count{
@@ -147,10 +147,8 @@ class ReplayComputer: NSObject,
         manager.delegate = self
     }
     
-    
-    
     var delegate: ViewModelDelegate?
-    private let REFRESH_FREQUENCY = 1.0
+    private let REFRESH_FREQUENCY = 0.05
     private var timeDelay = -5.0
     private var updateTimer: Timer?
     
@@ -282,6 +280,9 @@ extension ReplayComputer {
         
         let predictedVerticalSpeed = kalmanFilter.stateEstimatePrior[1, 0]
         
+        let sma = baroAltitudeHistory.simpleMovingAverage()
+        print("\(baroAltitude), \(sma.rounded(toPlaces: 1)), \(verticalSpeedMps.rounded(toPlaces: 1)), \(predictedVerticalSpeed.rounded(toPlaces: 1))")
+        
         // 4 - Assignment / maintenance
         verticalSpeedMps = abs(predictedVerticalSpeed) > 0.1 ? predictedVerticalSpeed : 0.0
         
@@ -341,7 +342,6 @@ extension ReplayComputer {
                 if let decodedResponse = try? JSONDecoder().decode(Response.self, from: data) {
                     if decodedResponse.results.first?.elevation != nil {
                         terrainElevation = decodedResponse.results.first!.elevation
-                        print("Elevation updated to: \(terrainElevation)")
                     }
                 }
                 self.lastElevationUpdate = Date.now

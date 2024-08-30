@@ -39,11 +39,11 @@ class FlightComputer: NSObject,
     // State
     var inFlight: Bool = false
     var readyToFly: Bool {
-#if DEBUG
+        #if targetEnvironment(simulator)
         return true
-#else
+        #else
         altAvailable && gpsAvailable && motionAvailable
-#endif
+        #endif
     }
     var launchTimeStamp: Date?
     var flightTime: TimeInterval {
@@ -201,7 +201,6 @@ class FlightComputer: NSObject,
         }
         
         let predictedVerticalSpeed = kalmanFilter.stateEstimatePrior[1, 0]
-        let verticalSpeedAverage = verticalSpeedHistory.average
         
         // 3 Apply filter / gain
         verticalSpeedMps = abs(predictedVerticalSpeed) > 0.1 ? predictedVerticalSpeed : 0.0
@@ -449,6 +448,7 @@ extension FlightComputer {
     
     ///
     /// Estimates wind speed and direction based on GPS  and compass measurements
+    /// Calculated measurement will only be between 0 - 10 m/s
     ///
     private func calculateRelativeWind() {
         let groundTrack = gpsCourse.degreesToRadians
@@ -468,6 +468,9 @@ extension FlightComputer {
         // Calculate wind speed
         relativeWindSpeed = abs(sqrt(windX * windX + windY * windY))
         relativeWindSpeed = relativeWindSpeed.rounded(toPlaces: 1)
+        if relativeWindSpeed < 0.0 || relativeWindSpeed > 10.0 {
+            relativeWindSpeed = 0.0
+        }
         
         // Calculate wind direction
         relativeWindDirection = (atan2(windY, windX) * 180.0 / .pi)
@@ -509,7 +512,7 @@ extension FlightComputer {
                         forAcceleration: self.acceleration
                     )
                     let altitude = self.baroAltitude.isNaN ? 0.0 : self.baroAltitude
-                    let verticalVelocity = self.verticalSpeedMps.isNaN ? 0.0 : self.verticalSpeedMps
+                    let verticalVelocity = self.baroAltitudeHistory.simpleMovingAverage()
                     self.verticalAccelerationMps2 = zAccel.isNaN ? 0.0 : zAccel
                     
                     self.zHistory.append([altitude, verticalVelocity, zAccel])
@@ -529,6 +532,7 @@ extension FlightComputer {
     ///
     /// Checks altimter availability
     ///
+    /// - Returns true if barometer is available
     private func checkAltimeterAvailable() -> Bool {
         return altAvailable
     }
@@ -536,6 +540,7 @@ extension FlightComputer {
     ///
     /// Checks CoreMotion availability
     ///
+    /// - Returns true if barometer is available
     private func checkMotionAvailable() -> Bool {
         return motionManager.isDeviceMotionAvailable
     }

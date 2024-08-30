@@ -25,7 +25,7 @@ class FlightAnalyzer: FlightAnalyzerService {
                         continue
                     }
                     
-                    if frame.verticalSpeed > 0.5 || frame.derrivedVerticalSpeed > 0.5 {
+                    if frame.verticalSpeed > 0.25 || frame.derrivedVerticalSpeed > 0.25 {
                         
                         let node = MapMark(
                             coords: CLLocationCoordinate2D(
@@ -42,10 +42,6 @@ class FlightAnalyzer: FlightAnalyzerService {
             }
         }
         
-        if results.points.isEmpty && !results.divided {
-            throw FlightAnalyzerError.noResultsFound("No results found")
-        } else {
-            return results
-        }
+        return results
     }
 }

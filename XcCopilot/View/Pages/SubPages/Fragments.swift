@@ -156,7 +156,7 @@ struct WindBox: View {
 }
 
 struct FlightCard: View {
-    let flight: Flight
+    @Binding var flight: Flight
     
     var body: some View {
         VStack(alignment: .leading) {

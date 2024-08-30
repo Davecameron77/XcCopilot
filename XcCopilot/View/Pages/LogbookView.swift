@@ -27,9 +27,18 @@ struct LogbookView: View {
                                            description: Text("No flights stored/imported"))
                 } else {
                     List {
-                        ForEach(flights) { flight in
+                        ForEach(flights, id: \.self) { flight in
                             NavigationLink(value: flight) {
-                                FlightCard(flight: flight)
+                                VStack(alignment: .leading) {
+                                    Text(flight.title ?? "Unknown Flight")
+                                        .font(.title3)
+                                    HStack {
+                                        Text(flight.startDate ?? Date.now, style: .date)
+                                        Spacer()
+                                        Text(flight.duration ?? "00:00:00")
+                                    }
+                                    .font(.subheadline)
+                                }
                             }
                         }
                         .onDelete(perform: deleteFlight)
@@ -69,6 +78,7 @@ struct LogbookView: View {
 extension LogbookView {
     func getFlights() {
         Task {
+            print("Fetching flights")
             do {
                 self.flights = try await vm.getFlights()
             } catch {

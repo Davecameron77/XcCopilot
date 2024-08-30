@@ -13,7 +13,9 @@ import SwiftUI
 import UniformTypeIdentifiers
 import WeatherKit
 
-actor FlightRecorder {
+class FlightRecorder: FlightRecorderService {
+
+    var delegate: (any ViewModelDelegate)?
     
     var flight: Flight?
     static var flightDate: Date = Date.now
@@ -51,7 +53,7 @@ actor FlightRecorder {
     ///
     /// Stores a frame recorded by the flight computer
     ///
-    /// - Parameter frame - The frame to store
+    /// - Parameter frame: The frame to store
     func storeActiveFrame(
         acceleration: CMAcceleration,
         gravity: CMAcceleration,
@@ -80,6 +82,9 @@ actor FlightRecorder {
     ///
     /// Ends a flight, calculating metadata
     ///
+    /// - Parameter withWeather: The weather to append
+    /// - Parameters pilot: The pilots name
+    /// - Parameters glider: The model of glider
     func endFlight(withWeather weather: Weather?, pilot pilotName: String, glider gliderName: String) async throws {
         guard flight != nil else { throw FlightRecorderError.invalidState("No flight assigned for recording") }
         
@@ -176,7 +181,12 @@ extension FlightRecorder {
         flight.title = title
         
         CoreDataManager.sharedContext.insert(flight)
-        try CoreDataManager.sharedContext.save()
+        do {
+            try CoreDataManager.sharedContext.save()
+        } catch {
+            print(error)
+            print("Fuck")
+        }
         
         return flight
     }
@@ -185,7 +195,7 @@ extension FlightRecorder {
     /// Persists a frame to the database
     ///
     /// - Parameter frame: The frame to store
-    private func saveFrame(_ frame: FlightFrame) throws {
+    func saveFrame(_ frame: FlightFrame) throws {
         CoreDataManager.sharedContext.insert(frame)
         try CoreDataManager.sharedContext.save()
     }
@@ -265,40 +275,38 @@ extension FlightRecorder {
             // Derrived vertical speed
             let sortedFrames = frames.sorted(by: { $0.timestamp! < $1.timestamp! })
             
-            if frames.first!.baroAltitude == 0.0 {
-                for index in 0...sortedFrames.count - 1 {
-                    
-                    var derrivedVerticalSpeed = 0.0
-                    
-                    if index == 0 {
-                        derrivedVerticalSpeed = 0.0
-                    } else if index == 1 {
-                        derrivedVerticalSpeed = sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                    } else if index == 2 {
-                        var delta = 0.0
-                        delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                        delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
-                     
-                        derrivedVerticalSpeed = delta / 2.0
-                    } else if index == 3 {
-                        var delta = 0.0
-                        delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                        delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
-                        delta += sortedFrames[index-2].baroAltitude - sortedFrames[index-3].baroAltitude
-                                         
-                        derrivedVerticalSpeed = delta / 3.0
-                    } else {
-                        var delta = 0.0
-                        delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                        delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
-                        delta += sortedFrames[index-2].baroAltitude - sortedFrames[index-3].baroAltitude
-                        delta += sortedFrames[index-3].baroAltitude - sortedFrames[index-4].baroAltitude
-                                         
-                        derrivedVerticalSpeed = delta / 4.0
-                    }
-                    
-                    sortedFrames[index].derrivedVerticalSpeed = derrivedVerticalSpeed
+            for index in 0...sortedFrames.count - 1 {
+                
+                var derrivedVerticalSpeed = 0.0
+                
+                if index == 0 {
+                    derrivedVerticalSpeed = 0.0
+                } else if index == 1 {
+                    derrivedVerticalSpeed = sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
+                } else if index == 2 {
+                    var delta = 0.0
+                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
+                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
+                 
+                    derrivedVerticalSpeed = delta / 2.0
+                } else if index == 3 {
+                    var delta = 0.0
+                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
+                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
+                    delta += sortedFrames[index-2].baroAltitude - sortedFrames[index-3].baroAltitude
+                                     
+                    derrivedVerticalSpeed = delta / 3.0
+                } else {
+                    var delta = 0.0
+                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
+                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
+                    delta += sortedFrames[index-2].baroAltitude - sortedFrames[index-3].baroAltitude
+                    delta += sortedFrames[index-3].baroAltitude - sortedFrames[index-4].baroAltitude
+                                     
+                    derrivedVerticalSpeed = delta / 4.0
                 }
+                
+                sortedFrames[index].derrivedVerticalSpeed = derrivedVerticalSpeed
             }
             
             // Boundaries
@@ -313,15 +321,13 @@ extension FlightRecorder {
             flight.gpsModel = "iPhone"
             flight.pilot = pilot ?? "Unknown Pilot"
             flight.gliderName = glider ?? "Unknown Glider"
-            #if !DEBUG
-            flight.flightTitle = "Imported Flight: \(flightDate.formatted(.dateTime.year().month().day()))"
-            #endif
+            flight.title = "Imported Flight: \(flight.startDate?.formatted(.dateTime.year().month().day()) ?? "Unknown Date")"
             
             // Weather
             if weather != nil {
                 flight.addWeather(weather: weather!)
             }
-            
+
             try CoreDataManager.sharedContext.save()
         }
     }
@@ -333,6 +339,7 @@ extension FlightRecorder {
     func importFlight(forUrl url: URL) async throws {
         
         Task(priority: .userInitiated) {
+            
             do {
                 var flight = try createFlightWithTitle(url.lastPathComponent)
                 flight.imported = true
@@ -508,7 +515,7 @@ extension FlightRecorder {
             throw CdError.invalidState("Failed to export file for flight \(flight.title ?? "Unknown Flight")")
         }
     }
-    
+
     ///
     /// Processes an A record for an imported flight
     ///
@@ -564,7 +571,10 @@ extension FlightRecorder {
             longitude *= -1
         }
         
-        let baroAlt = Double(line.subString(from: 25, to: 29))!
+        let BAlt = line.subString(from: 25, to: 30)
+        let GAlt = line.subString(from: 30, to: 35)
+        
+        let baroAlt = Double(line.subString(from: 25, to: 30))!
         let gpsAlt = Double(line.subString(from: 30, to: 35))!
         
         let frame = try createFrame(forFlight: flight)
@@ -600,7 +610,7 @@ extension FlightRecorder {
                 var dateComponents = DateComponents()
                 dateComponents.day = Int(date.subString(from: 1, to: 2))
                 dateComponents.month = Int(date.subString(from: 2, to: 4))
-                dateComponents.year = (Int(date.subString(from: 4, to: 6))! + 2000)
+                dateComponents.year = (Int(date.subString(from: 4, to: 6)) ?? 0 + 2000)
                 FlightRecorder.flightDate = Calendar.current.date(from: dateComponents)!
             } else {
                 throw FlightRecorderError.invalidIgcData("Corrupt HFDTE record")

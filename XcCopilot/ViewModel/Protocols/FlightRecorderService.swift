@@ -14,23 +14,14 @@ import WeatherKit
 protocol FlightRecorderService {
     var delegate: ViewModelDelegate? { get set }
     
-    func armForFlight()
-    func storeFrame(
-        acceleration: CMAcceleration,
-        gravity: CMAcceleration,
-        gpsAltitude: Double,
-        gpsCourse: Double,
-        gpsCoords: CLLocationCoordinate2D,
-        baroAltitude: Double,
-        verticalVelocity: Double
-    ) throws
-    func endFlight(withWeather weather: Weather?, pilot pilotName: String, glider gliderName: String) throws
+    func armForFlight() throws
+    func saveFrame(_ frame: FlightFrame) throws
+    func endFlight(withWeather weather: Weather?, pilot pilotName: String, glider gliderName: String) async throws
     func getFlights() throws -> [Flight]
-    func getFrames(forFlight flight: Flight) throws -> [FlightFrame]
-    func updateFlightTitle(forFlight flight: Flight, withTitle title: String) throws
+    func updateFlightTitle(forFlight flight: Flight, withTitle title: String) async throws
     func deleteFlight(_ flight: Flight) throws
-    func importFlight(forUrl url: URL) async throws -> Bool
-    func exportFlight(flightToExport: Flight) async throws -> IgcFile
+    func importFlight(forUrl url: URL) async throws
+    func exportFlight(flightToExport: Flight) async throws -> IgcFile?
 }
 
 enum FlightRecorderError: Error {

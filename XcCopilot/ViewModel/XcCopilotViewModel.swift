@@ -165,8 +165,8 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     init() {
         mapPosition = MapCameraPosition.userLocation(followsHeading: true, fallback: cameraBackup)
         
-        flightComputer = ReplayComputer()
-//        flightComputer = FlightComputer()f
+//        flightComputer = ReplayComputer()
+        flightComputer = FlightComputer()
         flightRecorder = FlightRecorder()
         flightAnalzyer = FlightAnalyzer()
         
@@ -188,7 +188,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         flightState = .armed
         Task {
             do {
-                try await flightRecorder.armForFlight()
+                try flightRecorder.armForFlight()
             } catch {
                 logger?.debug("Error arming for flight: \(error)")
                 showAlert(withText: "Error arming for flight")
@@ -269,13 +269,13 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         
         
         // Detect a launch
-        if flightState == .armed && gpsSpeed > 7.0 {
+        if flightState == .armed && gpsSpeed > 5.0 {
             startFlying()
         }
-        
+
         // Detect a landing
-        if flightState == .inFlight && gpsSpeed < 1.0 && calculatedElevation < 10.0 {
-            #if DEBUG
+        if flightState == .inFlight && gpsSpeed < 1.0 && calculatedElevation < 10.0  && flightComputer.flightTime > 30.0 {
+            #if targetEnvironment(simulator)
             
             #else
             stopFlying()
@@ -350,7 +350,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         if flightComputer.inFlight {
             Task(priority: .medium) {
                 do {
-                    try await flightRecorder.storeActiveFrame(
+                    try flightRecorder.storeActiveFrame(
                         acceleration: flightComputer.acceleration,
                         gravity: flightComputer.gravity,
                         gpsAltitude: gpsAltitude,
@@ -376,7 +376,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         let task = Task(priority: .background) {
             do {
                 try await flightRecorder.importFlight(forUrl: url)
-                showAlert(withText: "Flight imported")
+                showAlert(withText: "\(url.lastPathComponent) imported")
                 return true
             } catch {
                 logger?.debug("\(error.localizedDescription)")
@@ -415,7 +415,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     /// - Returns A list of found flights
     func getFlights() async throws -> [Flight] {
         do {
-            return try await flightRecorder.getFlights()
+            return try flightRecorder.getFlights()
         } catch {
             logger?.debug("\(error.localizedDescription)")
             showAlert(withText: "Failed to fetch flights")
@@ -432,7 +432,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     /// - Returns A list of found flights
     func getFlightsAroundRegion(_ region: CLLocationCoordinate2D, withSpan span: MKCoordinateSpan) async -> [Flight] {
         do {
-            return try await flightRecorder.getFlightsAroundCoords(region, withSpan: span)
+            return try flightRecorder.getFlightsAroundCoords(region, withSpan: span)
         } catch {
             logger?.debug("\(error.localizedDescription)")
             showAlert(withText: "Failed to fetch flights")
@@ -463,7 +463,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     func deleteFlight(_ flight: Flight) {
         Task {
             do {
-                try await flightRecorder.deleteFlight(flight)
+                try flightRecorder.deleteFlight(flight)
             } catch {
                 logger?.debug("\(error)")
                 showAlert(withText: "Failed to delete flight: \(flight.title ?? "Unknown")")
@@ -491,8 +491,8 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
                 showAlert(withText: "No data found for provided flights")
             }
         } catch {
-            logger?.debug("\(error)")
-            showAlert(withText: "Failed to analyze flights: \(error)")
+            logger?.debug("Flight Analyzer error: \(error)")
+            showAlert(withText: error.localizedDescription)
         }
         
         return nil
