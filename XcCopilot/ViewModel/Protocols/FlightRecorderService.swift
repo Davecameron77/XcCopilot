@@ -15,9 +15,9 @@ protocol FlightRecorderService {
     var delegate: ViewModelDelegate? { get set }
     
     func armForFlight() throws
-    func saveFrame(_ frame: FlightFrame) throws
+    func saveFrame(_ frame: FlightFrame) async throws
     func endFlight(withWeather weather: Weather?, pilot pilotName: String, glider gliderName: String) async throws
-    func getFlights() throws -> [Flight]
+    func getFlights() async throws -> [Flight]
     func updateFlightTitle(forFlight flight: Flight, withTitle title: String) async throws
     func deleteFlight(_ flight: Flight) throws
     func importFlight(forUrl url: URL) async throws

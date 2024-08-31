@@ -30,14 +30,12 @@ final class FlightRecorderTests: XCTestCase {
             try? flightRecorder.deleteAllFlights()
             try? await flightRecorder.importFlight(forUrl: url)
             sleep(2)
-            let flights = try? flightRecorder.getFlights()
+            let flights = try? await flightRecorder.getFlights()
             
             XCTAssertNotNil(flights)
             XCTAssert(!flights!.isEmpty)
             XCTAssertNotNil(flights!.first)
             XCTAssert(flights!.first?.duration != nil)
-            
-
         }
     }
     
@@ -66,7 +64,7 @@ final class FlightRecorderTests: XCTestCase {
             try? flightRecorder.deleteAllFlights()
             try? await flightRecorder.importFlight(forUrl: url)
             sleep(2)
-            let flights = try? flightRecorder.getFlights()
+            let flights = try? await flightRecorder.getFlights()
             
             XCTAssertNotNil(flights)
             XCTAssertFalse(flights!.isEmpty)
@@ -83,7 +81,7 @@ final class FlightRecorderTests: XCTestCase {
             try? flightRecorder.deleteAllFlights()
             try? await flightRecorder.importFlight(forUrl: url)
             sleep(2)
-            let flights = try? flightRecorder.getFlightsAroundCoords(
+            let flights = try? await flightRecorder.getFlightsAroundCoords(
                 CLLocationCoordinate2D(latitude: 49.24, longitude: -121.88),
                 withSpan: MKCoordinateSpan(latitudeDelta: 1, longitudeDelta: 1)
             )

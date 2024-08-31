@@ -415,7 +415,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     /// - Returns A list of found flights
     func getFlights() async throws -> [Flight] {
         do {
-            return try flightRecorder.getFlights()
+            return try await flightRecorder.getFlights()
         } catch {
             logger?.debug("\(error.localizedDescription)")
             showAlert(withText: "Failed to fetch flights")
@@ -432,7 +432,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     /// - Returns A list of found flights
     func getFlightsAroundRegion(_ region: CLLocationCoordinate2D, withSpan span: MKCoordinateSpan) async -> [Flight] {
         do {
-            return try flightRecorder.getFlightsAroundCoords(region, withSpan: span)
+            return try await flightRecorder.getFlightsAroundCoords(region, withSpan: span)
         } catch {
             logger?.debug("\(error.localizedDescription)")
             showAlert(withText: "Failed to fetch flights")
