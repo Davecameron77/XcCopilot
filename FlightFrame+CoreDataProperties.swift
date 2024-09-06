@@ -2,7 +2,7 @@
 //  FlightFrame+CoreDataProperties.swift
 //  XcCopilot
 //
-//  Created by Dave Cameron on 2024-08-16.
+//  Created by Dave Cameron on 2024-09-04.
 //
 //
 
@@ -38,6 +38,7 @@ extension FlightFrame {
     @NSManaged public var longitudeSeconds: Int64
     @NSManaged public var timestamp: Date?
     @NSManaged public var verticalSpeed: Double
+    @NSManaged public var gpsSpeed: Double
     @NSManaged public var flight: Flight?
 
 }
