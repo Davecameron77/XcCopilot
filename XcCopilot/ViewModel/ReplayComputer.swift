@@ -53,11 +53,9 @@ class ReplayComputer: NSObject,
         super.init()
         
         let records = getJSONData()
-        var count = 0
         
         updateTimer = Timer.scheduledTimer(withTimeInterval: REFRESH_FREQUENCY,
                                            repeats: true) { timer in
-//            print("Sequence: \(self.timeDelay)")
             
             self.timeDelay += 1
             if self.timeDelay >= 0 && Int(self.timeDelay) < records.count{

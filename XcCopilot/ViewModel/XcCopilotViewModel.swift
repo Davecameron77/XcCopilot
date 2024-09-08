@@ -176,7 +176,10 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         updateTimer = Timer.scheduledTimer(withTimeInterval: REFRESH_FREQUENCY,
                                            repeats: true) { timer in
             self.updateFlightVars()
+            #warning("Add INet Check")
+            #if !targetEnvironment(simulator)
             self.updateWeather()
+            #endif
             self.logFlightFrame()
         }
     }
@@ -186,14 +189,13 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     func armForFlight() {
         flightState = .armed
-        Task {
+        Task(priority: .userInitiated) {
             do {
                 try flightRecorder.armForFlight()
             } catch {
                 logger?.debug("Error arming for flight: \(error)")
                 showAlert(withText: "Error arming for flight")
             }
-            
         }
     }
     
@@ -216,7 +218,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     func stopFlying() {
         flightState = .landed
         flightComputer.stopFlying()
-        Task {
+        Task(priority: .userInitiated) {
             do {
                 try await flightRecorder.endFlight(withWeather: currentWeather, pilot: pilotName, glider: gliderName)
                 await MainActor.run {
@@ -321,7 +323,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     func updateWeather() {
         if Date.now.distance(to: self.currentWeatherTimestamp) > TimeInterval(1800) || self.currentWeather == nil {
-            Task {
+            Task(priority: .medium) {
                 let location = CLLocation(
                     latitude: flightComputer.currentCoords.latitude,
                     longitude: flightComputer.currentCoords.longitude
@@ -350,12 +352,13 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         if flightComputer.inFlight {
             Task(priority: .medium) {
                 do {
-                    try flightRecorder.storeActiveFrame(
+                    try flightRecorder.createAndStoreFrame(
                         acceleration: flightComputer.acceleration,
                         gravity: flightComputer.gravity,
                         gpsAltitude: gpsAltitude,
                         gpsCourse: gpsCourse,
                         gpsCoords: gpsCoords,
+                        gpsSpeed: gpsSpeed,
                         baroAltitude: baroAltitude,
                         verticalVelocity: verticalSpeedMps
                     )
@@ -375,9 +378,13 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     func importIgcFile(forUrl url: URL) async -> Bool {
         let task = Task(priority: .background) {
             do {
-                try await flightRecorder.importFlight(forUrl: url)
-                showAlert(withText: "\(url.lastPathComponent) imported")
-                return true
+                if try await flightRecorder.importAndStoreFlight(forUrl: url) {
+                    showAlert(withText: "\(url.lastPathComponent) imported")
+                    return true
+                } else {
+                    showAlert(withText: "Failed to import flight \(url.lastPathComponent)")
+                    return false
+                }                
             } catch {
                 logger?.debug("\(error.localizedDescription)")
                 showAlert(withText: "Error importing IGC file: \(error.localizedDescription)")
@@ -476,13 +483,8 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     /// - Parameter : Array of flights to analyze
     /// - Parameter withinSpan: The area to search
-    ///
     /// - Returns an optional DmsQuadtree with results if they are found
-    func analyzeFlights(
-        _ flights: [Flight],
-        aroundCoords coords: CLLocationCoordinate2D,
-        withinSpan span: MKCoordinateSpan
-    ) -> DmsQuadtree? {
+    func analyzeFlights(_ flights: [Flight], aroundCoords coords: CLLocationCoordinate2D, withinSpan span: MKCoordinateSpan) -> DmsQuadtree? {
         do {
             let tree = try flightAnalzyer.analyzeStoredFlights(flights, aroundCoords: coords, withinSpan: span)
             if tree.divided || tree.points.count > 0 {
@@ -503,8 +505,7 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     ///
     /// - Parameter forContext: The map to measure from
     /// - Parameter withGeometry: The screen geometry to use
-    func calculateGlideRangeToDisplay(forContext context: MapCameraUpdateContext,
-                                      withGeometry geometry: GeometryProxy) {
+    func calculateGlideRangeToDisplay(forContext context: MapCameraUpdateContext, withGeometry geometry: GeometryProxy) {
         
         let center = context.camera.centerCoordinate
         let span = context.region.span

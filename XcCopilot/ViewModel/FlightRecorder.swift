@@ -14,77 +14,69 @@ import UniformTypeIdentifiers
 import WeatherKit
 
 class FlightRecorder: FlightRecorderService {
-
-    var delegate: (any ViewModelDelegate)?
     
+    var delegate: (any ViewModelDelegate)?
     var flight: Flight?
     static var flightDate: Date = Date.now
-
+    var importQueue = OperationQueue()
+    
     ///
     /// Enables takeoff detection and passes a reference of the flight to record
     ///
-    /// - Parameter flight - The flight to store frames in
     func armForFlight() throws {
-        Task(priority: .userInitiated) {
-            flight = try await createFlightWithTitle()
+        flight = Flight(context: CoreDataManager.shared.privateContext)
+        guard flight != nil else { throw FlightRecorderError.invalidState("No flight assigned for recording") }
+        
+        flight!.id = UUID()
+        flight!.igcID = flight!.id!.uuidString
+        flight!.title = Date.now.formatted(date: .abbreviated, time: .omitted)
+        
+        if CoreDataManager.shared.privateContext.hasChanges || CoreDataManager.shared.viewContext.hasChanges {
+            try CoreDataManager.shared.privateContext.save()
+            try CoreDataManager.shared.viewContext.save()
         }
     }
     
-    ///
-    /// Creates a frame for a provided flight or the currently active flight
-    ///
-    /// - Parameter forFlight: The flight to assign the frame to
-    private func createFrame(forFlight flight: Flight?) async throws -> FlightFrame {
-        
-        guard flight != nil || self.flight != nil else { throw CdError.recordingFailure("Error creating flightframe, no flight found") }
-        
-        let result = await CoreDataManager.sharedContext.perform {
-            let frame = FlightFrame(context: CoreDataManager.sharedContext)
-            frame.id = UUID()
-            
-            if flight != nil {
-                frame.flight = flight ?? self.flight
-                frame.flightID = flight!.igcID ?? self.flight!.igcID
-            } else {
-                frame.flight = self.flight
-                frame.flightID = self.flight!.igcID
-            }
-            
-            return frame
-        }
-        
-        return result
-    }
     
     ///
     /// Stores a frame recorded by the flight computer
     ///
-    /// - Parameter frame: The frame to store
-    func storeActiveFrame(
-        acceleration: CMAcceleration,
-        gravity: CMAcceleration,
-        gpsAltitude: Double,
-        gpsCourse: Double,
-        gpsCoords: CLLocationCoordinate2D,
-        baroAltitude: Double,
-        verticalVelocity: Double
-    ) throws {
+    /// - Parameter acceleration: The acceleration to store
+    /// - Parameter gravity: The gravity to store
+    /// - Parameter gpsAltitude: The GPS altitude to store
+    /// - Parameter gpsCourse: The GPS course to store
+    /// - Parameter gpsCoords: The GPS coords to store
+    /// - Parameter gpsSpeed: The GPS speed to store
+    /// - Parameter baroAltitude: The barometric altitude to store
+    /// - Parameter verticalVelocity: The calculated vertical velocity to store
+    func createAndStoreFrame(acceleration: CMAcceleration, gravity: CMAcceleration, gpsAltitude: Double,
+                             gpsCourse: Double, gpsCoords: CLLocationCoordinate2D, gpsSpeed: Double,
+                             baroAltitude: Double, verticalVelocity: Double) throws {
+        
         guard flight != nil else { throw FlightRecorderError.invalidState("No flight assigned for recording") }
         
-        Task(priority: .medium) {
-            let frame = try await createFrame(forFlight: nil)
-            
-            frame.assignVars(
-                acceleration: acceleration,
-                gravity: gravity,
-                gpsAltitude: gpsAltitude,
-                gpsCourse: gpsCourse,
-                gpsCoords: gpsCoords,
-                baroAltitude: baroAltitude,
-                verticalSpeed: verticalVelocity
-            )
-                    
-            try await saveFrame(frame)
+        let frame = FlightFrame(context: CoreDataManager.shared.privateContext)
+        frame.id = UUID()
+        frame.flight = flight
+        frame.flightID = flight!.igcID
+        frame.timestamp = Date.now
+        frame.accelerationX = acceleration.x
+        frame.accelerationY = acceleration.y
+        frame.accelerationZ = acceleration.z
+        frame.gravityX = gravity.x
+        frame.gravityY = gravity.y
+        frame.gravityZ = gravity.z
+        frame.gpsAltitude = gpsAltitude
+        frame.gpsCourse = gpsCourse
+        frame.latitude = gpsCoords.latitude
+        frame.longitude = gpsCoords.longitude
+        frame.gpsSpeed = gpsSpeed
+        frame.baroAltitude = baroAltitude
+        frame.verticalSpeed = verticalVelocity
+        
+        if CoreDataManager.shared.privateContext.hasChanges || CoreDataManager.shared.viewContext.hasChanges {
+            try CoreDataManager.shared.privateContext.save()
+            try CoreDataManager.shared.viewContext.save()
         }
     }
     
@@ -92,14 +84,84 @@ class FlightRecorder: FlightRecorderService {
     /// Ends a flight, calculating metadata
     ///
     /// - Parameter withWeather: The weather to append
-    /// - Parameters pilot: The pilots name
-    /// - Parameters glider: The model of glider
-    func endFlight(withWeather weather: Weather?, pilot pilotName: String, glider gliderName: String) async throws {
-        guard flight != nil else { throw FlightRecorderError.invalidState("No flight assigned for recording") }
+    /// - Parameter pilot: The pilots name
+    /// - Parameter glider: The model of glider
+    func endFlight(withWeather weather: Weather?, pilot pilotName: String = "Unknown Pilot", glider gliderName: String = "Unnamed Glider") async throws {
+        guard flight != nil else { throw CdError.recordingFailure("Failed to conclude flight") }
         
-        try await concludeStoringFlight(flight!, andWeather: weather, pilot: pilotName, glider: gliderName)
+        let frames = (flight!.frames?.allObjects as! [FlightFrame]).sorted(by: { $0.timestamp! < $1.timestamp! })
+        guard frames.count > 0 else { throw CdError.recordingFailure("No frames found for flight") }
+        
+        // Start / End Duration
+        flight!.startDate = frames.first!.timestamp
+        flight!.endDate = frames.last!.timestamp
+        
+        let interval = frames.last!.timestamp!.timeIntervalSince(frames.first!.timestamp!)
+        flight!.duration = interval.hourMinuteSecond
+        
+        // Launch / Land
+        flight!.launchLatitude = frames.first!.latitude
+        flight!.launchLongitude = frames.first!.longitude
+        flight!.landLatitude = frames.last!.latitude
+        flight!.landLongitude = frames.last!.longitude
+        
+        // Derrived vertical speed
+        for index in 0...frames.count - 1 {
+            var derrivedVerticalSpeed = 0.0
+            
+            if index == 0 {
+                derrivedVerticalSpeed = 0.0
+            } else if index == 1 {
+                derrivedVerticalSpeed = frames[index].baroAltitude - frames[index-1].baroAltitude
+            } else if index == 2 {
+                var delta = 0.0
+                delta += frames[index].baroAltitude - frames[index-1].baroAltitude
+                delta += frames[index-1].baroAltitude - frames[index-2].baroAltitude
+                
+                derrivedVerticalSpeed = delta / 2.0
+            } else if index == 3 {
+                var delta = 0.0
+                delta += frames[index].baroAltitude - frames[index-1].baroAltitude
+                delta += frames[index-1].baroAltitude - frames[index-2].baroAltitude
+                delta += frames[index-2].baroAltitude - frames[index-3].baroAltitude
+                
+                derrivedVerticalSpeed = delta / 3.0
+            } else {
+                var delta = 0.0
+                delta += frames[index].baroAltitude - frames[index-1].baroAltitude
+                delta += frames[index-1].baroAltitude - frames[index-2].baroAltitude
+                delta += frames[index-2].baroAltitude - frames[index-3].baroAltitude
+                delta += frames[index-3].baroAltitude - frames[index-4].baroAltitude
+                
+                derrivedVerticalSpeed = delta / 4.0
+            }
+            
+            frames[index].derrivedVerticalSpeed = derrivedVerticalSpeed
+        }
+        
+        // Boundaries
+        flight!.maxLatitude = frames.max(by: { $0.latitude < $1.latitude })?.latitude ?? 0.0
+        flight!.minLatitude = frames.min(by: { $0.latitude < $1.latitude })?.latitude ?? 0.0
+        flight!.maxLongitude = frames.max(by: { $0.longitude < $1.longitude })?.longitude ?? 0.0
+        flight!.minLongitude = frames.min(by: { $0.longitude < $1.longitude })?.longitude ?? 0.0
+                
+        // Meta
+        flight!.varioHardwareVer = "iPhone"
+        flight!.varioFirmwareVer = ""
+        flight!.gpsModel = "iPhone"
+        flight!.pilot = pilotName
+        flight!.gliderName = gliderName
+        
+        // Weather
+        if weather != nil {
+            flight!.addWeather(weather: weather!)
+        }
+        
+        if CoreDataManager.shared.privateContext.hasChanges || CoreDataManager.shared.viewContext.hasChanges {
+            try CoreDataManager.shared.privateContext.save()
+            try CoreDataManager.shared.viewContext.save()
+        }
     }
-    
 }
 
 // Logbook
@@ -107,28 +169,23 @@ extension FlightRecorder {
     ///
     /// Returns a list of all flights
     ///
+    /// - Returns an array of all stored flights
     func getFlights() async throws -> [Flight] {
-        
         let request = Flight.fetchRequest()
         let sortDescriptor = NSSortDescriptor(key: "startDate", ascending: true)
         request.sortDescriptors = [sortDescriptor]
         
-        let result = try await CoreDataManager.sharedContext.perform {
-            return try CoreDataManager.sharedContext.fetch(request)
-        }
-
-        return result
+        return try CoreDataManager.shared.privateContext.fetch(request)
     }
     
     ///
     /// Returns flights that took off within the given region
     ///
-    func getFlightsAroundCoords(
-        _ coords: CLLocationCoordinate2D,
-        withSpan span: MKCoordinateSpan
-    ) async throws -> [Flight] {
+    /// - Parameter coords: The centre coordinates to search
+    /// - Parameter withSpan: The distance from centre to search
+    /// - Returns a lis tof flights within the specified region
+    func getFlightsAroundCoords(_ coords: CLLocationCoordinate2D, withSpan span: MKCoordinateSpan) async throws -> [Flight] {
         
-        let request = Flight.fetchRequest()
         let latSpan = span.latitudeDelta
         let longSpan = span.longitudeDelta
         
@@ -150,7 +207,7 @@ extension FlightRecorder {
             maxLong = coords.longitude + longSpan * multiplier
             minLong = coords.longitude - longSpan * multiplier
         }
-
+        
         
         let predicate = NSPredicate(
             format: "launchLatitude >= %f AND launchLatitude <= %f AND launchLongitude >= %f AND launchLongitude <= %f",
@@ -159,68 +216,24 @@ extension FlightRecorder {
             minLong,
             maxLong
         )
+        
+        let request = Flight.fetchRequest()
         request.predicate = predicate
         
-        let result = try await CoreDataManager.sharedContext.perform {
-            try CoreDataManager.sharedContext.fetch(request)
-        }
-
-        return result
+        return try CoreDataManager.shared.privateContext.fetch(request)
     }
     
     ///
     /// Returns a stored flight with the given igcId
     ///
     /// - Parameter withIgcId: The id of the flight to load
-    private func getFlight(withIgcId igcId: String) async throws -> Flight {
+    /// - Returns a single flight with the given IGC ID if found, else nil
+    private func getFlight(withIgcId igcID: String) async throws -> Flight? {
+        let query = Flight.fetchRequest()
+        let predicate = NSPredicate(format: "igcID == %@", igcID)
+        query.predicate = predicate
         
-        let result = try await CoreDataManager.sharedContext.perform {
-            let request = Flight.fetchRequest()
-            request.predicate = NSPredicate(format: "igcID == %@", igcId)
-            let results = try CoreDataManager.sharedContext.fetch(request)
-            
-            if results.isEmpty {
-                throw CdError.noRecordsFound("No stored flight found")
-            } else {
-                return results.first!
-            }
-        }
-        
-        return result
-    }
-    
-    ///
-    /// Creates and stores a new flight with a given title, active or logbook
-    /// If no title is supplied, it is stored as 'Unknown Flight'
-    ///
-    private func createFlightWithTitle(_ title: String = "\(Date.now.formatted(.iso8601))") async throws -> Flight {
-        
-        let result = try await CoreDataManager.sharedContext.perform {
-            let flight = Flight(context: CoreDataManager.sharedContext)
-            
-            flight.id = UUID()
-            flight.igcID = flight.id!.uuidString
-            flight.title = title
-            
-            CoreDataManager.sharedContext.insert(flight)
-            try CoreDataManager.sharedContext.save()
-            
-            return flight
-        }
-        
-        return result
-    }
-    
-    ///
-    /// Persists a frame to the database
-    ///
-    /// - Parameter frame: The frame to store
-    func saveFrame(_ frame: FlightFrame) async throws {
-        try await CoreDataManager.sharedContext.perform {
-            CoreDataManager.sharedContext.insert(frame)
-            try CoreDataManager.sharedContext.save()
-        }
-        
+        return try CoreDataManager.shared.privateContext.fetch(query).first
     }
     
     ///
@@ -228,11 +241,10 @@ extension FlightRecorder {
     ///
     /// - Parameter flight - The flight to delete
     func deleteFlight(_ flight: Flight) throws {
-        Task {
-            try await CoreDataManager.sharedContext.perform {
-                CoreDataManager.sharedContext.delete(flight)
-                try CoreDataManager.sharedContext.save()
-            }
+        CoreDataManager.shared.privateContext.delete(flight)
+        if CoreDataManager.shared.privateContext.hasChanges || CoreDataManager.shared.viewContext.hasChanges {
+            try CoreDataManager.shared.privateContext.save()
+            try CoreDataManager.shared.viewContext.save()
         }
     }
     
@@ -257,164 +269,145 @@ extension FlightRecorder {
     /// - Parameter forFlight: The flight to update the title for
     /// - Parameter withTitle: The new title to assign
     func updateFlightTitle(forFlight flight: Flight, withTitle newTitle: String) async throws {
-
-        try await CoreDataManager.sharedContext.perform {
+        let query = Flight.fetchRequest()
+        let predicate = NSPredicate(format: "igcID == %@", flight.igcID!)
+        query.predicate = predicate
+        let results = try CoreDataManager.shared.privateContext.fetch(query)
+        
+        if let storedFlight = results.first {
+            storedFlight.title = newTitle
+            if CoreDataManager.shared.privateContext.hasChanges || CoreDataManager.shared.viewContext.hasChanges {
+                try CoreDataManager.shared.privateContext.save()
+                try CoreDataManager.shared.viewContext.save()
+            }
+        }
+    }
+    
+    ///
+    /// Imports a flight for the given URL
+    ///
+    /// - Parameter url: The URL to import from
+    /// - Returns true on success, false on failure
+    func importAndStoreFlight(forUrl url: URL) async throws -> Bool {
+        do {
+            var flight = Flight(context: CoreDataManager.shared.privateContext)
+            flight.id = UUID()
+            flight.title = url.lastPathComponent
+            flight.igcID = flight.id!.uuidString
+            
+            for try await line in url.lines {
+                if line.starts(with: "A") {
+                    processARecord(record: line, forFlight: &flight)
+                    flight.gpsModel = line.subString(from: 1, to: 6)
+                }
+                if line.starts(with: "B") {
+                    processBRecord(record: line, forFlight: &flight)
+                }
+                if line.starts(with: "H") {
+                    try processHRecord(record: line, forFlight: &flight)
+                }
+            }
+                        
+            if CoreDataManager.shared.privateContext.hasChanges {
+                try CoreDataManager.shared.privateContext.save()
+                try CoreDataManager.shared.viewContext.save()
+            } else {
+                CoreDataManager.shared.privateContext.reset()
+                return false
+            }
+            
+            // Post processsing
             let query = Flight.fetchRequest()
             let predicate = NSPredicate(format: "igcID == %@", flight.igcID!)
             query.predicate = predicate
-            let results = try CoreDataManager.sharedContext.fetch(query)
-            if let storedFlight = results.first {
-                try CoreDataManager.sharedContext.save()
-                storedFlight.title = newTitle
-            }
-        }
-        
-    }
-    
-    ///
-    /// Finishes appending metadata after a flight file has been imported / concluded
-    ///
-    /// - Parameter flight: The flight to conclude
-    /// - Parameter weather: The weather to append, if available
-    private func concludeStoringFlight(_ flight: Flight, andWeather weather: Weather?, pilot: String?, glider: String?) async throws {
-        if let frames = flight.frames?.allObjects as? [FlightFrame] {
-            guard let first = frames.min(by: { $0.timestamp! < $1.timestamp! }),
-                  let last = frames.max(by: { $0.timestamp! < $1.timestamp! }) else {
-                throw CdError.recordingFailure("Invalid flight dates found in file")
+            let results = try CoreDataManager.shared.privateContext.fetch(query)
+            if results.count > 0 {
+                flight = results.first!
             }
             
-            // Duration
-            flight.startDate = first.timestamp
-            flight.endDate = last.timestamp
-            
-            let duration = flight.startDate!.distance(to: flight.endDate!)
-            let hour = String(format: "%02d", duration.hour)
-            let minute = String(format: "%02d", duration.minute)
-            let second = String(format: "%02d", duration.second)
-            flight.duration = "\(hour):\(minute):\(second)"
-            
-            let interval = last.timestamp!.timeIntervalSince(first.timestamp!)
-            flight.duration = interval.hourMinuteSecond
-            
-            // Launch / Land
-            flight.launchLatitude = first.latitude
-            flight.launchLongitude = first.longitude
-            flight.landLatitude = last.latitude
-            flight.landLongitude = last.longitude
-            
-            // Derrived vertical speed
-            let sortedFrames = frames.sorted(by: { $0.timestamp! < $1.timestamp! })
-            
-            for index in 0...sortedFrames.count - 1 {
+            if let frames = (flight.frames?.allObjects as? [FlightFrame])?.sorted(by: { $0.timestamp! < $1.timestamp! }) {
                 
-                var derrivedVerticalSpeed = 0.0
-                
-                if index == 0 {
-                    derrivedVerticalSpeed = 0.0
-                } else if index == 1 {
-                    derrivedVerticalSpeed = sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                } else if index == 2 {
-                    var delta = 0.0
-                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
-                 
-                    derrivedVerticalSpeed = delta / 2.0
-                } else if index == 3 {
-                    var delta = 0.0
-                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
-                    delta += sortedFrames[index-2].baroAltitude - sortedFrames[index-3].baroAltitude
-                                     
-                    derrivedVerticalSpeed = delta / 3.0
-                } else {
-                    var delta = 0.0
-                    delta += sortedFrames[index].baroAltitude - sortedFrames[index-1].baroAltitude
-                    delta += sortedFrames[index-1].baroAltitude - sortedFrames[index-2].baroAltitude
-                    delta += sortedFrames[index-2].baroAltitude - sortedFrames[index-3].baroAltitude
-                    delta += sortedFrames[index-3].baroAltitude - sortedFrames[index-4].baroAltitude
-                                     
-                    derrivedVerticalSpeed = delta / 4.0
-                }
-                
-                sortedFrames[index].derrivedVerticalSpeed = derrivedVerticalSpeed
-            }
-            
-            // Boundaries
-            flight.maxLatitude = frames.max(by: { $0.latitude < $1.latitude })?.latitude ?? 0.0
-            flight.minLatitude = frames.min(by: { $0.latitude < $1.latitude })?.latitude ?? 0.0
-            flight.maxLongitude = frames.max(by: { $0.longitude < $1.longitude })?.longitude ?? 0.0
-            flight.minLongitude = frames.min(by: { $0.longitude < $1.longitude })?.longitude ?? 0.0
-            
-            // Meta
-            flight.varioHardwareVer = "iPhone"
-            flight.varioFirmwareVer = ""
-            flight.gpsModel = "iPhone"
-            flight.pilot = pilot ?? "Unknown Pilot"
-            flight.gliderName = glider ?? "Unknown Glider"
-            flight.title = "Imported Flight: \(flight.startDate?.formatted(.dateTime.year().month().day()) ?? "Unknown Date")"
-            
-            // Weather
-            if weather != nil {
-                flight.addWeather(weather: weather!)
-            }
-
-            try await CoreDataManager.sharedContext.perform {
-                try CoreDataManager.sharedContext.save()
-            }
-        }
-    }
-    
-    ///
-    /// Imports a .IGC file
-    ///
-    /// - Parameter forUrl: The URL from which the flight shall be imported
-    func importFlight(forUrl url: URL) async throws {
-        
-        Task(priority: .userInitiated) {
-            
-            do {
-                var flight = try await createFlightWithTitle(url.lastPathComponent)
-                flight.imported = true
-
-                for try await line in url.lines {
+                let flightStartDate = frames.first?.timestamp ?? Date.distantPast
+                                
+                for index in 0...frames.count - 1 {
+                    // Detect and update rollover
+                    if frames[index].timestamp! < flightStartDate {
+                        frames[index].timestamp!.addTimeInterval(86400)
+                    }
                     
-                    if line.starts(with: "A") {
-                        processARecord(record: line, forFlight: &flight)
+                    var derrivedVerticalSpeed = 0.0
+                    var tsSinceLastUpdate: TimeInterval?
+                    
+                    if index != 0 {
+                        let lastTs = frames[index-1].timestamp!
+                        let currentTs = frames[index].timestamp!
+                        
+                        tsSinceLastUpdate = lastTs.distance(to: currentTs)
                     }
-                    else if line.starts(with: "B") {
-                        try processBRecord(record: line, forFlight: flight)
+                    
+                    if index == 0 {
+                        derrivedVerticalSpeed = 0.0
+                    } else {
+                        let verticalDisplacement = frames[index].baroAltitude - frames[index-1].baroAltitude
+                        derrivedVerticalSpeed = verticalDisplacement / tsSinceLastUpdate!
                     }
-                    else if line.starts(with: "H") {
-                        try processHRecord(record: line, forFlight: &flight)
-                    }
+                    
+                    frames[index].derrivedVerticalSpeed = derrivedVerticalSpeed
                 }
-                            
-                try await concludeStoringFlight(flight, andWeather: nil, pilot: nil, glider: nil)
                 
-                #if DEBUG
-                print("Imported a flight: \(flight.title!)")
-                #endif
-                
-            } catch {
-                if flight != nil {
-                    try deleteFlight(flight!)
+                // Dates / Duration
+                guard let first = frames.min(by: { $0.timestamp! < $1.timestamp! }),
+                      let last = frames.max(by: { $0.timestamp! < $1.timestamp! }) else {
+                    CoreDataManager.shared.privateContext.reset()
+                    throw FlightRecorderError.invalidIgcData("Error storing flight \(flight.title ?? "Unknown flight")")
                 }
-                print("Import Error: \(error)")
-                throw error
+                flight.startDate = first.timestamp!
+                flight.endDate = last.timestamp!
+                
+                let interval = last.timestamp!.timeIntervalSince(first.timestamp!)
+                flight.duration = interval.hourMinuteSecond
+                
+                // Boundaries
+                flight.maxLatitude = frames.max(by: { $0.latitude < $1.latitude })?.latitude ?? 0.0
+                flight.minLatitude = frames.min(by: { $0.latitude < $1.latitude })?.latitude ?? 0.0
+                flight.maxLongitude = frames.max(by: { $0.longitude < $1.longitude })?.longitude ?? 0.0
+                flight.minLongitude = frames.min(by: { $0.longitude < $1.longitude })?.longitude ?? 0.0
+                
+                // Launch / Land
+                flight.launchLatitude = first.latitude
+                flight.launchLongitude = first.longitude
+                flight.landLatitude = first.latitude
+                flight.landLongitude = first.longitude
             }
+            
+            if CoreDataManager.shared.privateContext.hasChanges {
+                try CoreDataManager.shared.privateContext.save()
+                try CoreDataManager.shared.viewContext.save()
+            } else {
+                print("Fuck!!!")
+                CoreDataManager.shared.privateContext.reset()
+                return false
+            }
+            
+            return true
+            
+        } catch {
+            CoreDataManager.shared.privateContext.reset()
+            return false
         }
-        
     }
     
     ///
     /// Exports a .IGC file
     ///
-    /// - Parameter flightToExport: The flight to be xported
+    /// - Parameter flightToExport: The flight to be exported
+    /// - Returns an IGC file for the selected flight
     func exportFlight(flightToExport: Flight) async throws -> IgcFile? {
         
         let flight = try await getFlight(withIgcId: flightToExport.igcID!)
+        guard flight != nil else { throw CdError.noRecordsFound("No flight found to export") }
         
-        if let frames = flight.frames?.allObjects as? [FlightFrame] {
+        if let frames = flight!.frames?.allObjects as? [FlightFrame] {
             
             var textToExport = ""
             
@@ -532,7 +525,7 @@ extension FlightRecorder {
                 // Lat / Lng
                 let dms = CLLocationCoordinate2D(latitude: frame.latitude, longitude: frame.longitude)
                 textToExport += dms.coordinateToDMS()
-
+                
                 // Baro Alt
                 textToExport += "A"
                 textToExport += frame.getBaroAltitudeForPrinting()
@@ -544,10 +537,10 @@ extension FlightRecorder {
             
             return IgcFile(initialText: textToExport)
         } else {
-            throw CdError.invalidState("Failed to export file for flight \(flight.title ?? "Unknown Flight")")
+            throw CdError.invalidState("Failed to export file for flight \(flight!.title ?? "Unknown Flight")")
         }
     }
-
+    
     ///
     /// Processes an A record for an imported flight
     ///
@@ -562,68 +555,46 @@ extension FlightRecorder {
     /// Processes a B record for an imported flight
     ///
     /// - Parameter record: The record to process
-    /// - Parameter flight: The flight to assign the record to
-    private func processBRecord(record line: String, forFlight flight: Flight) throws {
+    /// - Parameter flight (inout): The flight to assign the record to
+    private func processBRecord(record line: String, forFlight flight: inout Flight) {
         
-        Task(priority: .medium) {
-            
-            var dateComponents = DateComponents()
-            dateComponents.year = FlightRecorder.flightDate.get(.year)
-            dateComponents.month = FlightRecorder.flightDate.get(.month)
-            dateComponents.day = FlightRecorder.flightDate.get(.day)
-            dateComponents.hour = Int(line[line.index(line.startIndex, offsetBy: 1)...line.index(line.startIndex, offsetBy: 3)])
-            dateComponents.hour = Int(line.subString(from: 1, to: 3).trimmingCharacters(in: .whitespacesAndNewlines))
-            dateComponents.minute = Int(line.subString(from: 3, to: 5).trimmingCharacters(in: .whitespacesAndNewlines))
-            dateComponents.second = Int(line.subString(from: 5, to: 7).trimmingCharacters(in: .whitespacesAndNewlines))
-            
-            // Detect rollover
-            var frameTs = Calendar.current.date(from: dateComponents)!
-            if let frames = flight.frames?.allObjects as? [FlightFrame] {
-                if frames.count > 0 {
-                    if frames.last!.timestamp! > frameTs {
-                        frameTs.addTimeInterval(86400)
-                    }
-                }
-            }
-            
-            let latDegrees = abs(Double(line.subString(from: 7, to: 9))!)
-            let latMinutes = abs(Double(line.subString(from: 9, to: 11))! / 60)
-            let latSecondsWhole = abs(Double(line.subString(from: 11, to: 14))!) / 1000
-            let latSeconds = (latSecondsWhole * 60) / 3600
-            let latDirection = line.subString(from: 14, to: 15)
-            var latitude = latDegrees + latMinutes + latSeconds
-            if latDirection == "S" {
-                latitude *= -1
-            }
-            
-            let longDegrees = abs(Double(line.subString(from: 15, to: 18))!)
-            let longMinutes = abs(Double(line.subString(from: 18, to: 20))! / 60)
-            let longSeocndsWhole = abs(Double(line.subString(from: 20, to: 23))!) / 1000
-            let longSeconds = (longSeocndsWhole * 60) / 3600
-            let longDirection = line.subString(from: 23, to: 24)
-            var longitude = longDegrees + longMinutes + longSeconds
-            if longDirection == "W" {
-                longitude *= -1
-            }
-            
-            let baroAlt = Double(line.subString(from: 25, to: 30))!
-            let gpsAlt = Double(line.subString(from: 30, to: 35))!
-            
-            
-            let frame = try await createFrame(forFlight: flight)
-            frame.assignVars(
-                acceleration: CMAcceleration(x: 0, y: 0, z: 0),
-                gravity: CMAcceleration(x: 0, y: 0, z: 0),
-                gpsAltitude: gpsAlt,
-                gpsCourse: 0,
-                gpsCoords: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
-                baroAltitude: baroAlt,
-                verticalSpeed: 0
-            )
-            frame.timestamp = frameTs
-            
-            try await saveFrame(frame)
-        }
+        var dateComponents = DateComponents()
+        dateComponents.year = FlightRecorder.flightDate.get(.year)
+        dateComponents.month = FlightRecorder.flightDate.get(.month)
+        dateComponents.day = FlightRecorder.flightDate.get(.day)
+        dateComponents.hour = Int(line[line.index(line.startIndex, offsetBy: 1)...line.index(line.startIndex, offsetBy: 3)])
+        dateComponents.hour = Int(line.subString(from: 1, to: 3).trimmingCharacters(in: .whitespacesAndNewlines))
+        dateComponents.minute = Int(line.subString(from: 3, to: 5).trimmingCharacters(in: .whitespacesAndNewlines))
+        dateComponents.second = Int(line.subString(from: 5, to: 7).trimmingCharacters(in: .whitespacesAndNewlines))
+        let frameTs = Calendar.current.date(from: dateComponents)!
+        
+        let latDegrees = abs(Double(line.subString(from: 7, to: 9))!)
+        let latMinutes = abs(Double(line.subString(from: 9, to: 11))! / 60)
+        let latSecondsWhole = abs(Double(line.subString(from: 11, to: 14))!) / 1000
+        let latSeconds = (latSecondsWhole * 60) / 3600
+        let latDirection = line.subString(from: 14, to: 15)
+        let latitude = (latDegrees + latMinutes + latSeconds) * (latDirection == "S" ? -1 : 1)
+        
+        let longDegrees = abs(Double(line.subString(from: 15, to: 18))!)
+        let longMinutes = abs(Double(line.subString(from: 18, to: 20))! / 60)
+        let longSeocndsWhole = abs(Double(line.subString(from: 20, to: 23))!) / 1000
+        let longSeconds = (longSeocndsWhole * 60) / 3600
+        let longDirection = line.subString(from: 23, to: 24)
+        let longitude = (longDegrees + longMinutes + longSeconds) * (longDirection == "W" ? -1 : 1)
+        
+        let baroAlt = Double(line.subString(from: 25, to: 30))!
+        let gpsAlt = Double(line.subString(from: 30, to: 35))!
+        
+        let frame = FlightFrame(context: CoreDataManager.shared.privateContext)
+        
+        frame.id = UUID()
+        frame.timestamp = frameTs
+        frame.baroAltitude = baroAlt
+        frame.gpsAltitude = gpsAlt
+        frame.latitude = latitude
+        frame.longitude = longitude
+        frame.flight = flight
+        frame.flightID = flight.igcID
     }
     
     ///
@@ -632,6 +603,7 @@ extension FlightRecorder {
     /// - Parameter record: The record to process
     /// - Parameter flight (inout): The flight to assign the record to
     private func processHRecord(record line: String, forFlight flight: inout Flight) throws {
+        
         // H Record
         switch line.subString(from: 0, to: 5) {
             
@@ -781,4 +753,5 @@ extension FlightRecorder {
             return
         }
     }
+    
 }

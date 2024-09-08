@@ -170,7 +170,7 @@ class FlightComputer: NSObject,
     /// Calculates VerticalVelocity based on given accelerometer/baro history
     /// Also attempts to identify the DMS of any thermals
     ///
-    func calculateVerticalVelocity() {
+    private func calculateVerticalVelocity() {
         
         guard !zHistory.isEmpty else {
             verticalSpeedMps = 0.0

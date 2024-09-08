@@ -36,11 +36,12 @@ struct PlaybackView: View {
                 Section {
                     VStack {
                         HStack {
-                            
                             Text(printedElapsedTime)
                             Slider(value: $pathIndex, in: 0...Double(nodes.count))
                                 .onChange(of: pathIndex) { oldValue, newValue in
-                                    updateTimings(newValue)
+                                    pathIndex = newValue
+                                    elapsedTimeInSeconds = nodes.first!.timestamp.distance(to: nodes[Int(pathIndex)].timestamp)
+                                    updateTimings()
                                 }
                             Text(printedTimeRemaining)
                         }
@@ -174,17 +175,8 @@ struct PlaybackView: View {
                     return
                 }
                 
-                pathIndex += 1
                 elapsedTimeInSeconds += 1
-                
-                withAnimation {
-                    playbackAltitude = nodes[Int(pathIndex)].altitude
-                    playbackVerticalSpeed = nodes[Int(pathIndex)].verticalSpeed != 0.0 ? nodes[Int(pathIndex)].verticalSpeed : nodes[Int(pathIndex)].derrivedVerticalSpeed
-                    
-                    let distance = haversineDistance(from: coordinateFromNode(nodes[Int(pathIndex)]),
-                                                     to: coordinateFromNode(nodes[Int(pathIndex) - 1]))
-                    playbackSpeed = distance * 60 * 60
-                }
+                updateTimings()
             }
         }
     }
@@ -194,9 +186,20 @@ struct PlaybackView: View {
 
 // Functions
 extension PlaybackView {
+    
+    ///
+    /// Sets up flight params for display
+    ///
     private func setup() {
-        updateTimings(0)
+        // Set timers
+        updateTimings()
         
+        if let start = self.nodes.min(by: { a, b in a.timestamp < b.timestamp })?.timestamp,
+           let end = self.nodes.max(by: { a, b in a.timestamp < b.timestamp })?.timestamp {
+            totalTimeInSeconds = end.timeIntervalSince(start)
+        }
+        
+        // Set map scope
         let maxLatitude  = self.nodes.max { a, b in a.latitude < b.latitude }?.latitude ?? 0.0
         let minLatitude  = self.nodes.min { a, b in a.latitude < b.latitude }?.latitude ?? 0.0
         let maxLongitude = self.nodes.max { a, b in a.longitude < b.longitude }?.longitude ?? 0.0
@@ -206,16 +209,60 @@ extension PlaybackView {
         
         let center = CLLocationCoordinate2D(latitude: centerLat, longitude: centerLong)
         
-        region =  MapCameraPosition.region(MKCoordinateRegion(center: center,
-                                                              span: MKCoordinateSpan(latitudeDelta: abs(maxLatitude - minLatitude) + 0.005,
-                                                                                     longitudeDelta: abs(maxLongitude - minLongitude + 0.005))))
+        region =  MapCameraPosition.region(
+            MKCoordinateRegion(center: center,
+                               span: MKCoordinateSpan(latitudeDelta: abs(maxLatitude - minLatitude) + 0.005,
+                                                      longitudeDelta: abs(maxLongitude - minLongitude + 0.005))))
+    }
+    
+    private func updateTimings() {
         
-        if let start = self.nodes.min(by: { a, b in a.timestamp < b.timestamp })?.timestamp,
-           let end = self.nodes.max(by: { a, b in a.timestamp < b.timestamp })?.timestamp {
-            totalTimeInSeconds = end.timeIntervalSince(start)
+        // Timestamp: Start of playback
+        let first = nodes.first?.timestamp
+        // Current applicable timestamp
+        let currentTs = first?.addingTimeInterval(elapsedTimeInSeconds)
+        // Time remaining in playback
+        let timeRemainingInSeconds = totalTimeInSeconds - elapsedTimeInSeconds
+        
+        // For printing
+        let hoursElapsed = Int(elapsedTimeInSeconds) / 3600
+        let minutesElapsed = (Int(elapsedTimeInSeconds) % 3600) / 60
+        let secondsElapsed = Int(elapsedTimeInSeconds) % 60
+        
+        let hoursRemaining = Int(timeRemainingInSeconds) / 3600
+        let minutesRemaining = (Int(timeRemainingInSeconds) % 3600) / 60
+        let secondsRemaining = Int(timeRemainingInSeconds) % 60
+
+        // Update view
+        withAnimation {
+            if nodes[Int(pathIndex) + 1].timestamp == currentTs {
+                pathIndex += 1
+            }
+            
+            printedElapsedTime = String(format: "%02d:%02d:%02d", hoursElapsed, minutesElapsed, secondsElapsed)
+            printedTimeRemaining = String(format: "%02d:%02d:%02d", hoursRemaining, minutesRemaining, secondsRemaining)
+            
+            playbackAltitude = nodes[Int(pathIndex)].altitude
+            playbackVerticalSpeed = nodes[Int(pathIndex)].verticalSpeed != 0.0 ? nodes[Int(pathIndex)].verticalSpeed : nodes[Int(pathIndex)].derrivedVerticalSpeed
+            
+            if pathIndex > 1 {
+                let distance = haversineDistance(
+                    from: CLLocationCoordinate2D(latitude: nodes[Int(pathIndex)].latitude, longitude: nodes[Int(pathIndex)].longitude),
+                    to: CLLocationCoordinate2D(latitude: nodes[Int(pathIndex) - 1].latitude, longitude: nodes[Int(pathIndex) - 1].longitude)
+                )
+                
+                let lastTs = nodes[Int(pathIndex) - 1].timestamp
+                let secondsSinceLastUpdate = lastTs.distance(to: currentTs!)
+                let playbackSpeedMps = (distance / 1000) / secondsSinceLastUpdate
+                
+                playbackSpeed = (playbackSpeedMps * 3600) / 1000
+            }
         }
     }
     
+    ///
+    /// Utility func to calculate distance between two DMS, from which speed can be derrived
+    ///
     private func haversineDistance(from coord1: CLLocationCoordinate2D, to coord2: CLLocationCoordinate2D) -> Double {
         let R = 6371.0 // Radius of the Earth in kilometers
         let lat1 = coord1.latitude.degreesToRadians
@@ -230,30 +277,5 @@ extension PlaybackView {
         let c = 2 * atan2(sqrt(a), sqrt(1 - a))
         
         return R * c
-    }
-    
-    private func coordinateFromNode(_ node: HashableNode) -> CLLocationCoordinate2D {
-        return CLLocationCoordinate2D(latitude: node.latitude, longitude: node.longitude)
-    }
-    
-    private func updateTimings(_ newValue: Double) {
-
-        pathIndex = newValue
-        elapsedTimeInSeconds = newValue
-        
-        let timeRemainingInSeconds = totalTimeInSeconds - elapsedTimeInSeconds
-        
-        let hoursElapsed = Int(elapsedTimeInSeconds) / 3600
-        let minutesElapsed = (Int(elapsedTimeInSeconds) % 3600) / 60
-        let secondsElapsed = Int(elapsedTimeInSeconds) % 60
-        
-        let hoursRemaining = Int(timeRemainingInSeconds) / 3600
-        let minutesRemaining = (Int(timeRemainingInSeconds) % 3600) / 60
-        let secondsRemaining = Int(timeRemainingInSeconds) % 60
-
-        withAnimation {
-            printedElapsedTime = String(format: "%02d:%02d:%02d", hoursElapsed, minutesElapsed, secondsElapsed)
-            printedTimeRemaining = String(format: "%02d:%02d:%02d", hoursRemaining, minutesRemaining, secondsRemaining)
-        }
     }
 }

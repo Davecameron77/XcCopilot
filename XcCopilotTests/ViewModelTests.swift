@@ -21,8 +21,9 @@ final class ViewModelTests: XCTestCase {
             
             Task {
                 do {
-                    try await vm.flightRecorder.deleteAllFlights()
+                    try vm.flightRecorder.deleteAllFlights()
                     let result = await vm.importIgcFile(forUrl: url)
+                    sleep(2)
                     let flights = try await vm.getFlights()
                     
                     XCTAssert(result)
@@ -45,7 +46,7 @@ final class ViewModelTests: XCTestCase {
             
             Task {
                 do {
-                    try await vm.flightRecorder.deleteAllFlights()
+                    try vm.flightRecorder.deleteAllFlights()
                     let result = await vm.importIgcFile(forUrl: url)
                     XCTAssert(result)
                     
@@ -71,8 +72,9 @@ final class ViewModelTests: XCTestCase {
             
             Task {
                 do {
-                    try await vm.flightRecorder.deleteAllFlights()
+                    try vm.flightRecorder.deleteAllFlights()
                     let result = await vm.importIgcFile(forUrl: url)
+                    sleep(2)
                     XCTAssert(result)
                     
                     let flight = try await vm.getFlights().first!
@@ -97,7 +99,7 @@ final class ViewModelTests: XCTestCase {
         if let filePath = bundle.path(forResource: "test_igc", ofType: "IGC") {
             let url = URL(fileURLWithPath: filePath)
             Task {
-                try await vm.flightRecorder.deleteAllFlights()
+                try vm.flightRecorder.deleteAllFlights()
                 let result = await vm.importIgcFile(forUrl: url)
                 XCTAssert(result)
                 
@@ -120,7 +122,7 @@ final class ViewModelTests: XCTestCase {
         if let filePath = bundle.path(forResource: "test_igc", ofType: "IGC") {
             let url = URL(fileURLWithPath: filePath)
             Task {
-                try await vm.flightRecorder.deleteAllFlights()
+                try vm.flightRecorder.deleteAllFlights()
                 let result = await vm.importIgcFile(forUrl: url)
                 XCTAssert(result)
                 

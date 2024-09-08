@@ -11,13 +11,7 @@ import XCTest
 
 final class FlightRecorderTests: XCTestCase {
     
-    override class func setUp() {
-        CoreDataManager.inMemory = true
-    }
-    
-    override class func tearDown() {
-        CoreDataManager.inMemory = false
-    }
+    let testQueue = OperationQueue()
             
     func testImportFlight() async {
 
@@ -28,8 +22,8 @@ final class FlightRecorderTests: XCTestCase {
             let url = URL(fileURLWithPath: filePath)
             
             try? flightRecorder.deleteAllFlights()
-            try? await flightRecorder.importFlight(forUrl: url)
-            sleep(2)
+            _ = try? await flightRecorder.importAndStoreFlight(forUrl: url)
+            sleep(3)
             let flights = try? await flightRecorder.getFlights()
             
             XCTAssertNotNil(flights)
@@ -40,6 +34,7 @@ final class FlightRecorderTests: XCTestCase {
     }
     
     func testExportFlight() async {
+        
         let flightRecorder = FlightRecorder()
         
         let bundle = Bundle(for: Self.self)
@@ -47,9 +42,10 @@ final class FlightRecorderTests: XCTestCase {
             let url = URL(fileURLWithPath: filePath)
             
             try? flightRecorder.deleteAllFlights()
-            try? await flightRecorder.importFlight(forUrl: url)
-            sleep(2)
+            _ = try? await flightRecorder.importAndStoreFlight(forUrl: url)
+            sleep(1)
             let result = try? await flightRecorder.exportFlight(flightToExport: flightRecorder.getFlights().first!)
+            
             XCTAssertNotNil(result)
         }
     }
@@ -62,7 +58,7 @@ final class FlightRecorderTests: XCTestCase {
             let url = URL(fileURLWithPath: filePath)
             
             try? flightRecorder.deleteAllFlights()
-            try? await flightRecorder.importFlight(forUrl: url)
+            _ = try? await flightRecorder.importAndStoreFlight(forUrl: url)
             sleep(2)
             let flights = try? await flightRecorder.getFlights()
             
@@ -79,7 +75,7 @@ final class FlightRecorderTests: XCTestCase {
             let url = URL(fileURLWithPath: filePath)
             
             try? flightRecorder.deleteAllFlights()
-            try? await flightRecorder.importFlight(forUrl: url)
+            _ = try? await flightRecorder.importAndStoreFlight(forUrl: url)
             sleep(2)
             let flights = try? await flightRecorder.getFlightsAroundCoords(
                 CLLocationCoordinate2D(latitude: 49.24, longitude: -121.88),
@@ -96,8 +92,9 @@ final class FlightRecorderTests: XCTestCase {
         
         try? flightRecorder.deleteAllFlights()
         try? flightRecorder.armForFlight()
-        let flight = flightRecorder.flight
+        sleep(1)
+        let flightIgcID = flightRecorder.flight?.igcID
         
-        XCTAssertNotNil(flight)
+        XCTAssertNotNil(flightIgcID)
     }
 }

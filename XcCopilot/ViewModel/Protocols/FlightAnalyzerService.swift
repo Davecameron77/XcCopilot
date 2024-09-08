@@ -9,11 +9,7 @@ import Foundation
 import MapKit
 
 protocol FlightAnalyzerService {
-    func analyzeStoredFlights(
-        _ flights: [Flight],
-        aroundCoords coords: CLLocationCoordinate2D,
-        withinSpan span: MKCoordinateSpan
-    ) throws -> DmsQuadtree
+    func analyzeStoredFlights(_ flights: [Flight], aroundCoords coords: CLLocationCoordinate2D, withinSpan span: MKCoordinateSpan) throws -> DmsQuadtree
 }
 
 enum FlightAnalyzerError: Error {

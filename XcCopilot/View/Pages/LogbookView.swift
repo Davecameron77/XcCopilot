@@ -78,7 +78,6 @@ struct LogbookView: View {
 extension LogbookView {
     func getFlights() {
         Task {
-            print("Fetching flights")
             do {
                 self.flights = try await vm.getFlights()
             } catch {

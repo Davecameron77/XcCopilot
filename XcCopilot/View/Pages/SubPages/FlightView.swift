@@ -67,7 +67,6 @@ struct FlightView: View {
             }
         }
         .onAppear {
-
             Task(priority: .high) {
                 self.fileToExport = await self.vm.exportIgcFile(flight: flight) ?? IgcFile(initialText: "")
             }
@@ -97,10 +96,10 @@ struct FlightView: View {
                                  derrivedVerticalSpeed: $0.derrivedVerticalSpeed)
                 }
                 
-                let maxLatitude  = path.max { a, b in a.latitude < b.latitude }?.latitude ?? 0.0
-                let minLatitude  = path.min { a, b in a.latitude < b.latitude }?.latitude ?? 0.0
-                let maxLongitude = path.max { a, b in a.longitude < b.longitude }?.longitude ?? 0.0
-                let minLongitude = path.min { a, b in a.longitude < b.longitude }?.longitude ?? 0.0
+                let maxLatitude  = flight.maxLatitude
+                let minLatitude  = flight.minLatitude
+                let maxLongitude = flight.maxLongitude
+                let minLongitude = flight.minLongitude
                 let centerLat    = (minLatitude + maxLatitude) / 2
                 let centerLong   = (minLongitude + maxLongitude) / 2
                 
@@ -113,10 +112,10 @@ struct FlightView: View {
             }
         }
         .navigationTitle(flight.title ?? "Unknown Flight")
+        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: [HashableNode].self) { path in
             PlaybackView(nodes: path)
         }
-        .navigationBarTitleDisplayMode(.inline)
         .onChange(of: flightName) {
             Task(priority: .userInitiated) {
                 vm.updateFlightTitle(flightToUpdate: flight, withTitle: flightName)
