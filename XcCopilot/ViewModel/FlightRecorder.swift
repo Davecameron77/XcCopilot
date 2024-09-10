@@ -383,7 +383,6 @@ extension FlightRecorder {
                 try CoreDataManager.shared.privateContext.save()
                 try CoreDataManager.shared.viewContext.save()
             } else {
-                print("Fuck!!!")
                 CoreDataManager.shared.privateContext.reset()
                 return false
             }

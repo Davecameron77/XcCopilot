@@ -10,17 +10,19 @@ import CoreData
 import CoreLocation
 import CoreMotion
 import MapKit
-import SwiftUI
+import Network
 import os
+import SwiftUI
 import WeatherKit
 import UniformTypeIdentifiers
-import SwiftData
 
 class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
     var logger: Logger? = .init(
         subsystem: Bundle.main.bundleIdentifier!,
         category: String(describing: XcCopilotViewModel.self)
     )
+    
+    let monitor = NWPathMonitor()
     
     var flightState: FlightState = .landed
     
@@ -176,10 +178,12 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
         updateTimer = Timer.scheduledTimer(withTimeInterval: REFRESH_FREQUENCY,
                                            repeats: true) { timer in
             self.updateFlightVars()
-            #warning("Add INet Check")
-            #if !targetEnvironment(simulator)
-            self.updateWeather()
-            #endif
+            
+            self.monitor.pathUpdateHandler = { path in
+                if path.status == .satisfied {
+                    self.updateWeather()
+                }
+            }
             self.logFlightFrame()
         }
     }
@@ -336,6 +340,8 @@ class XcCopilotViewModel: ObservableObject, ViewModelDelegate {
                         currentWeatherTimestamp = Date.now
                     }
                 } catch {
+                    // Defer next check
+                    currentWeatherTimestamp = Date.now.addingTimeInterval(900)
                     logger?.debug("Error fetching weather: \(error)")
                     showAlert(withText: "Error fetching weather")
                 }

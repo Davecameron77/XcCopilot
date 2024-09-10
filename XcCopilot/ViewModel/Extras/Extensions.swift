@@ -296,6 +296,7 @@ struct HashableNode: Hashable, Identifiable {
     let latitude: Double
     let longitude: Double
     let altitude: Double
+    let gpsSpeed: Double
     let verticalSpeed: Double
     let derrivedVerticalSpeed: Double
 }

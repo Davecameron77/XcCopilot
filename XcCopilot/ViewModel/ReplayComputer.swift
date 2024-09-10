@@ -279,7 +279,6 @@ extension ReplayComputer {
         let predictedVerticalSpeed = kalmanFilter.stateEstimatePrior[1, 0]
         
         let sma = baroAltitudeHistory.simpleMovingAverage()
-        print("\(baroAltitude), \(sma.rounded(toPlaces: 1)), \(verticalSpeedMps.rounded(toPlaces: 1)), \(predictedVerticalSpeed.rounded(toPlaces: 1))")
         
         // 4 - Assignment / maintenance
         verticalSpeedMps = abs(predictedVerticalSpeed) > 0.1 ? predictedVerticalSpeed : 0.0

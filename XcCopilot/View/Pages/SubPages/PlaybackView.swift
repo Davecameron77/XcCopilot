@@ -36,14 +36,29 @@ struct PlaybackView: View {
                 Section {
                     VStack {
                         HStack {
-                            Text(printedElapsedTime)
-                            Slider(value: $pathIndex, in: 0...Double(nodes.count))
-                                .onChange(of: pathIndex) { oldValue, newValue in
-                                    pathIndex = newValue
+                            Slider(
+                                value: $pathIndex,
+                                in: 0...Double(nodes.count) - 1,
+                                step: 1.0,
+                                label: { Text("") },
+                                minimumValueLabel: { Text(printedElapsedTime) },
+                                maximumValueLabel: { Text(printedTimeRemaining) })
+                            .onChange(of: pathIndex) { oldValue, newValue in
+                                    if newValue > Double(nodes.count) {
+                                        // Stop out of range below
+                                        pathIndex = Double(nodes.count) - 2
+                                    } else if newValue < 0 {
+                                        // Stop out of range above
+                                        pathIndex = 0
+                                    } else {
+                                        // Set pathIndex to slider val
+                                        pathIndex = newValue.rounded(toPlaces: 0)
+                                    }
+                                    // Update elapsed time
                                     elapsedTimeInSeconds = nodes.first!.timestamp.distance(to: nodes[Int(pathIndex)].timestamp)
+                                    // Update derrived measurements
                                     updateTimings()
                                 }
-                            Text(printedTimeRemaining)
                         }
                         HStack {
                             Button {
@@ -172,6 +187,7 @@ struct PlaybackView: View {
         .onReceive(timer) { input in
             if playing {
                 if elapsedTimeInSeconds == totalTimeInSeconds {
+                    playing = false
                     return
                 }
                 
@@ -180,8 +196,6 @@ struct PlaybackView: View {
             }
         }
     }
-    
-    
 }
 
 // Functions
@@ -219,7 +233,7 @@ extension PlaybackView {
         
         // Timestamp: Start of playback
         let first = nodes.first?.timestamp
-        // Current applicable timestamp
+        // Current applicable timestamp, used for haversine distance
         let currentTs = first?.addingTimeInterval(elapsedTimeInSeconds)
         // Time remaining in playback
         let timeRemainingInSeconds = totalTimeInSeconds - elapsedTimeInSeconds
@@ -235,8 +249,10 @@ extension PlaybackView {
 
         // Update view
         withAnimation {
-            if nodes[Int(pathIndex) + 1].timestamp == currentTs {
-                pathIndex += 1
+            if pathIndex < Double(nodes.count - 1) {
+                if nodes[Int(pathIndex) + 1].timestamp <= currentTs! {
+                    pathIndex += 1
+                }
             }
             
             printedElapsedTime = String(format: "%02d:%02d:%02d", hoursElapsed, minutesElapsed, secondsElapsed)
@@ -245,17 +261,21 @@ extension PlaybackView {
             playbackAltitude = nodes[Int(pathIndex)].altitude
             playbackVerticalSpeed = nodes[Int(pathIndex)].verticalSpeed != 0.0 ? nodes[Int(pathIndex)].verticalSpeed : nodes[Int(pathIndex)].derrivedVerticalSpeed
             
-            if pathIndex > 1 {
-                let distance = haversineDistance(
-                    from: CLLocationCoordinate2D(latitude: nodes[Int(pathIndex)].latitude, longitude: nodes[Int(pathIndex)].longitude),
-                    to: CLLocationCoordinate2D(latitude: nodes[Int(pathIndex) - 1].latitude, longitude: nodes[Int(pathIndex) - 1].longitude)
-                )
-                
-                let lastTs = nodes[Int(pathIndex) - 1].timestamp
-                let secondsSinceLastUpdate = lastTs.distance(to: currentTs!)
-                let playbackSpeedMps = (distance / 1000) / secondsSinceLastUpdate
-                
-                playbackSpeed = (playbackSpeedMps * 3600) / 1000
+            if nodes[Int(pathIndex)].gpsSpeed != 0.0 {
+                playbackSpeed = nodes[Int(pathIndex)].gpsSpeed
+            } else {
+                if pathIndex > 1 {
+                    let distance = haversineDistance(
+                        from: CLLocationCoordinate2D(latitude: nodes[Int(pathIndex)].latitude, longitude: nodes[Int(pathIndex)].longitude),
+                        to: CLLocationCoordinate2D(latitude: nodes[Int(pathIndex) - 1].latitude, longitude: nodes[Int(pathIndex) - 1].longitude)
+                    )
+                    
+                    let lastTs = nodes[Int(pathIndex) - 1].timestamp
+                    let secondsSinceLastUpdate = lastTs.distance(to: currentTs!)
+                    let playbackSpeedMps = (distance / 1000) / secondsSinceLastUpdate
+                    let speedKmHour = (playbackSpeedMps * 3600) / 1000
+                    playbackSpeed = speedKmHour > 0.0 && speedKmHour < 50.0 ? speedKmHour : 0.0
+                }
             }
         }
     }

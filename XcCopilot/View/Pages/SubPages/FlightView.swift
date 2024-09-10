@@ -92,6 +92,7 @@ struct FlightView: View {
                                  latitude: $0.latitude,
                                  longitude: $0.longitude,
                                  altitude: $0.baroAltitude,
+                                 gpsSpeed: $0.gpsSpeed,
                                  verticalSpeed: $0.verticalSpeed,
                                  derrivedVerticalSpeed: $0.derrivedVerticalSpeed)
                 }

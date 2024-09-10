@@ -8,6 +8,7 @@
 import Foundation
 import CoreLocation
 import CoreMotion
+import Network
 import SwiftUI
 
 ///
@@ -35,6 +36,7 @@ class FlightComputer: NSObject,
     }
     
     var delegate: ViewModelDelegate?
+    private let monitor = NWPathMonitor()
     
     // State
     var inFlight: Bool = false
@@ -244,7 +246,13 @@ class FlightComputer: NSObject,
     ///
     func calculateElevation() async {
         
-        // Update elevation reference
+        // Return if INet not available
+        monitor.pathUpdateHandler = { path in
+            if path.status != .satisfied {
+                return
+            }
+        }
+        
         if Date.now - self.lastElevationUpdate > TimeInterval(self.SECONDS_BETWEEN_ELEVATION_UPDATES) &&
            currentCoords.latitude != 0 &&
             currentCoords.longitude != 0 {
