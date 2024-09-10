@@ -18,7 +18,6 @@ class FlightRecorder: FlightRecorderService {
     var delegate: (any ViewModelDelegate)?
     var flight: Flight?
     static var flightDate: Date = Date.now
-    var importQueue = OperationQueue()
     
     ///
     /// Enables takeoff detection and passes a reference of the flight to record
